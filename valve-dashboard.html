@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แดชบอร์ดหัวหน้าช่าง — ห้องชาร์ปวาล์วน้ำ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0e2a3d; --teal:#0f7a72; --line:#dcd8cd; --muted:#6b7178; --paper:#f7f5f0;
+    --red:#c0392b; --amber:#b8860b; --green:#1e7d5c;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Sarabun',sans-serif;background:var(--paper);color:#1b1f22;}
+
+  #gate{position:fixed;inset:0;background:var(--navy);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;padding:20px;text-align:center;}
+  #gate h2{margin:0;font-size:18px;}
+  #gate input{padding:12px 14px;border-radius:10px;border:none;font-family:inherit;font-size:15px;width:220px;text-align:center;}
+  #gate button{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;}
+  #gate .err{color:#ff9d8a;font-size:13px;min-height:16px;}
+  #gate .hint{font-size:11px;opacity:.55;max-width:280px;}
+
+  #app{display:none;}
+  .topbar{background:var(--navy);color:#fff;padding:16px 18px;}
+  .topbar h1{font-size:17px;margin:0 0 2px;}
+  .topbar .sub{font-size:12px;opacity:.7;}
+
+  .controls{max-width:1100px;margin:0 auto;padding:14px 18px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .controls select, .controls input{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:13.5px;background:#fff;}
+  .controls input[type="text"]{flex:1;min-width:160px;}
+  .todaybtn{background:#fff;border:1px solid var(--teal);color:var(--teal);border-radius:10px;padding:9px 14px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;}
+  .todaybtn.active{background:var(--teal);color:#fff;}
+
+  .stats{max-width:1100px;margin:0 auto;padding:14px 18px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;}
+  .stat .num{font-size:26px;font-weight:700;line-height:1;}
+  .stat .lbl{font-size:11.5px;color:var(--muted);margin-top:6px;}
+  .stat.ok .num{color:var(--green);}
+  .stat.bad .num{color:var(--red);}
+  .stat.pending .num{color:var(--amber);}
+
+  .overdue-panel{max-width:1100px;margin:14px auto 0;padding:0 18px;}
+  .overdue-box{background:#fdf1ef;border:1.5px solid var(--red);border-radius:12px;padding:14px 16px;}
+  .overdue-box.none{background:#eefaf4;border-color:var(--green);}
+  .overdue-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:10px;}
+  .overdue-head .title{font-size:14.5px;font-weight:700;color:var(--red);}
+  .overdue-box.none .overdue-head .title{color:var(--green);}
+  .overdue-head .count{background:var(--red);color:#fff;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700;}
+  .overdue-box.none .overdue-head .count{background:var(--green);}
+  .overdue-head .toggle{font-size:12px;color:var(--muted);}
+  .overdue-list{margin-top:10px;display:none;}
+  .overdue-list.show{display:block;}
+  .overdue-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0d9d5;font-size:13px;}
+  .overdue-item:last-child{border-bottom:none;}
+  .overdue-item .rname{font-weight:600;color:var(--navy);}
+  .overdue-item .rmeta{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .overdue-item .days{flex-shrink:0;font-size:12px;font-weight:700;color:var(--red);background:#fbe0dc;border-radius:999px;padding:3px 10px;white-space:nowrap;}
+  .overdue-item .days.never{background:#f3d4ce;}
+
+  .section-title{max-width:1100px;margin:22px auto 8px;padding:0 18px;font-size:14px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px;}
+  .section-title .count{background:var(--line);color:var(--navy);border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;}
+
+  .list{max-width:1100px;margin:0 auto;padding:0 18px 40px;display:flex;flex-direction:column;gap:8px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;}
+  .card:hover{border-color:var(--teal);}
+  .card .left{min-width:0;}
+  .card .rname{font-weight:700;font-size:14px;}
+  .card .rmeta{font-size:12px;color:var(--muted);margin-top:2px;}
+  .badge{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
+  .badge.pass{background:#e4f3ec;color:var(--green);}
+  .badge.issue{background:#fbe7e4;color:var(--red);}
+  .badge.pending{background:#fdf1d8;color:var(--amber);}
+  .empty{color:var(--muted);font-size:13px;padding:14px;text-align:center;}
+
+  #modalBg{position:fixed;inset:0;background:rgba(14,42,61,.55);display:none;align-items:flex-end;justify-content:center;z-index:500;}
+  #modalBg.show{display:flex;}
+  #modal{background:#fff;border-radius:16px 16px 0 0;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:18px;}
+  @media(min-width:640px){ #modalBg{align-items:center;} #modal{border-radius:16px;} }
+  #modal .mclose{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
+  #modal h3{margin:0 0 2px;font-size:17px;color:var(--navy);}
+  #modal .mmeta{font-size:12.5px;color:var(--muted);margin-bottom:12px;}
+  #modal .row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  #modal .row .k{color:var(--muted);flex-shrink:0;}
+  #modal .row .v{text-align:right;}
+  #modal .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+  #modal .photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer;}
+  #modal .note{font-size:12px;color:var(--muted);margin-top:10px;}
+
+  #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:700;}
+  #lightbox.show{display:flex;}
+  #lightbox img{max-width:94vw;max-height:90vh;object-fit:contain;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>🔒 แดชบอร์ดหัวหน้าช่าง</h2>
+  <div>กรุณาใส่รหัสผ่านเพื่อเข้าดูข้อมูล</div>
+  <input type="password" id="pwInput" placeholder="รหัสผ่าน" autofocus>
+  <button onclick="checkPassword()">เข้าสู่ระบบ</button>
+  <div class="err" id="pwErr"></div>
+  <div class="hint">หมายเหตุ: รหัสผ่านนี้ป้องกันการเปิดดูโดยไม่ตั้งใจเท่านั้น ไม่ใช่ระบบความปลอดภัยระดับสูง</div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <h1>แดชบอร์ดหัวหน้าช่าง — สรุปผลตรวจห้องชาร์ปวาล์วน้ำ</h1>
+    <div class="sub">อาคารภูมิสิริมังคลานุสรณ์ · ทั้งหมด 708 จุด</div>
+  </div>
+
+  <div class="controls">
+    <button class="todaybtn" id="todayBtn" onclick="setToday()">📅 วันนี้</button>
+    <input type="date" id="dateInput">
+    <select id="floorFilter"><option value="">ทุกชั้น</option></select>
+    <input type="text" id="searchBox" placeholder="ค้นหารหัสห้อง เช่น 15/3...">
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="overdue-panel">
+    <div class="overdue-box" id="overdueBox">
+      <div class="overdue-head" id="overdueHead" onclick="toggleOverdueList()">
+        <div class="title" id="overdueTitle">⏳ กำลังตรวจสอบจุดที่เกินกำหนด...</div>
+        <div class="toggle" id="overdueToggle"></div>
+      </div>
+      <div class="overdue-list" id="overdueList"></div>
+    </div>
+  </div>
+
+  <div class="section-title">📋 จุดที่ตรวจแล้ว <span class="count" id="cInspected">0</span></div>
+  <div class="list" id="listInspected"></div>
+
+  <div class="section-title">⏳ จุดที่ยังไม่ได้ตรวจ (วันที่เลือก) <span class="count" id="cPending">0</span></div>
+  <div class="list" id="listPending"></div>
+</div>
+
+<div id="modalBg" onclick="if(event.target===this)closeModal()"><div id="modal"></div></div>
+<div id="lightbox" onclick="this.classList.remove('show')"><img id="lightboxImg" src=""></div>
+
+<script>
+const CONFIG = {
+  // ต้องเป็น URL เดียวกับที่ตั้งไว้ใน valve-checklist.html
+  GAS_URL: "",
+  PASSWORD: "valve2569"   // <-- เปลี่ยนรหัสผ่านตรงนี้ได้เลย
+};
+
+function checkPassword(){
+  const val = document.getElementById("pwInput").value;
+  if (val === CONFIG.PASSWORD){
+    sessionStorage.setItem("valve_dash_auth", "1");
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    init();
+  } else {
+    document.getElementById("pwErr").textContent = "รหัสผ่านไม่ถูกต้อง";
+  }
+}
+document.getElementById("pwInput").addEventListener("keydown", e=>{ if (e.key === "Enter") checkPassword(); });
+if (sessionStorage.getItem("valve_dash_auth") === "1"){
+  document.getElementById("gate").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+const ROOMS = [{"id": 1, "code": "1/1", "name": "ห้องชาร์ปวาล์วน้ำ 1/1", "floor": "1", "seq": 1}, {"id": 2, "code": "1/2", "name": "ห้องชาร์ปวาล์วน้ำ 1/2", "floor": "1", "seq": 2}, {"id": 3, "code": "1/3", "name": "ห้องชาร์ปวาล์วน้ำ 1/3", "floor": "1", "seq": 3}, {"id": 4, "code": "1/4", "name": "ห้องชาร์ปวาล์วน้ำ 1/4", "floor": "1", "seq": 4}, {"id": 5, "code": "1/5", "name": "ห้องชาร์ปวาล์วน้ำ 1/5", "floor": "1", "seq": 5}, {"id": 6, "code": "1/6", "name": "ห้องชาร์ปวาล์วน้ำ 1/6", "floor": "1", "seq": 6}, {"id": 7, "code": "M/1", "name": "ห้องชาร์ปวาล์วน้ำ M/1", "floor": "M", "seq": 1}, {"id": 8, "code": "M/2", "name": "ห้องชาร์ปวาล์วน้ำ M/2", "floor": "M", "seq": 2}, {"id": 9, "code": "M/3", "name": "ห้องชาร์ปวาล์วน้ำ M/3", "floor": "M", "seq": 3}, {"id": 10, "code": "M/4", "name": "ห้องชาร์ปวาล์วน้ำ M/4", "floor": "M", "seq": 4}, {"id": 11, "code": "M/5", "name": "ห้องชาร์ปวาล์วน้ำ M/5", "floor": "M", "seq": 5}, {"id": 12, "code": "2/1", "name": "ห้องชาร์ปวาล์วน้ำ 2/1", "floor": "2", "seq": 1}, {"id": 13, "code": "2/2", "name": "ห้องชาร์ปวาล์วน้ำ 2/2", "floor": "2", "seq": 2}, {"id": 14, "code": "2/3", "name": "ห้องชาร์ปวาล์วน้ำ 2/3", "floor": "2", "seq": 3}, {"id": 15, "code": "2/4", "name": "ห้องชาร์ปวาล์วน้ำ 2/4", "floor": "2", "seq": 4}, {"id": 16, "code": "2/5", "name": "ห้องชาร์ปวาล์วน้ำ 2/5", "floor": "2", "seq": 5}, {"id": 17, "code": "2/6", "name": "ห้องชาร์ปวาล์วน้ำ 2/6", "floor": "2", "seq": 6}, {"id": 18, "code": "2/7", "name": "ห้องชาร์ปวาล์วน้ำ 2/7", "floor": "2", "seq": 7}, {"id": 19, "code": "2/8", "name": "ห้องชาร์ปวาล์วน้ำ 2/8", "floor": "2", "seq": 8}, {"id": 20, "code": "2/9", "name": "ห้องชาร์ปวาล์วน้ำ 2/9", "floor": "2", "seq": 9}, {"id": 21, "code": "2/10", "name": "ห้องชาร์ปวาล์วน้ำ 2/10", "floor": "2", "seq": 10}, {"id": 22, "code": "2/11", "name": "ห้องชาร์ปวาล์วน้ำ 2/11", "floor": "2", "seq": 11}, {"id": 23, "code": "2/12", "name": "ห้องชาร์ปวาล์วน้ำ 2/12", "floor": "2", "seq": 12}, {"id": 24, "code": "3/1", "name": "ห้องชาร์ปวาล์วน้ำ 3/1", "floor": "3", "seq": 1}, {"id": 25, "code": "3/2", "name": "ห้องชาร์ปวาล์วน้ำ 3/2", "floor": "3", "seq": 2}, {"id": 26, "code": "3/3", "name": "ห้องชาร์ปวาล์วน้ำ 3/3", "floor": "3", "seq": 3}, {"id": 27, "code": "3/4", "name": "ห้องชาร์ปวาล์วน้ำ 3/4", "floor": "3", "seq": 4}, {"id": 28, "code": "3/5", "name": "ห้องชาร์ปวาล์วน้ำ 3/5", "floor": "3", "seq": 5}, {"id": 29, "code": "3/6", "name": "ห้องชาร์ปวาล์วน้ำ 3/6", "floor": "3", "seq": 6}, {"id": 30, "code": "3/7", "name": "ห้องชาร์ปวาล์วน้ำ 3/7", "floor": "3", "seq": 7}, {"id": 31, "code": "3/8", "name": "ห้องชาร์ปวาล์วน้ำ 3/8", "floor": "3", "seq": 8}, {"id": 32, "code": "3/9", "name": "ห้องชาร์ปวาล์วน้ำ 3/9", "floor": "3", "seq": 9}, {"id": 33, "code": "3/10", "name": "ห้องชาร์ปวาล์วน้ำ 3/10", "floor": "3", "seq": 10}, {"id": 34, "code": "4/1", "name": "ห้องชาร์ปวาล์วน้ำ 4/1", "floor": "4", "seq": 1}, {"id": 35, "code": "4/2", "name": "ห้องชาร์ปวาล์วน้ำ 4/2", "floor": "4", "seq": 2}, {"id": 36, "code": "4/3", "name": "ห้องชาร์ปวาล์วน้ำ 4/3", "floor": "4", "seq": 3}, {"id": 37, "code": "4/4", "name": "ห้องชาร์ปวาล์วน้ำ 4/4", "floor": "4", "seq": 4}, {"id": 38, "code": "4/5", "name": "ห้องชาร์ปวาล์วน้ำ 4/5", "floor": "4", "seq": 5}, {"id": 39, "code": "4/6", "name": "ห้องชาร์ปวาล์วน้ำ 4/6", "floor": "4", "seq": 6}, {"id": 40, "code": "4/7", "name": "ห้องชาร์ปวาล์วน้ำ 4/7", "floor": "4", "seq": 7}, {"id": 41, "code": "4/8", "name": "ห้องชาร์ปวาล์วน้ำ 4/8", "floor": "4", "seq": 8}, {"id": 42, "code": "4/9", "name": "ห้องชาร์ปวาล์วน้ำ 4/9", "floor": "4", "seq": 9}, {"id": 43, "code": "5/1", "name": "ห้องชาร์ปวาล์วน้ำ 5/1", "floor": "5", "seq": 1}, {"id": 44, "code": "5/2", "name": "ห้องชาร์ปวาล์วน้ำ 5/2", "floor": "5", "seq": 2}, {"id": 45, "code": "5/3", "name": "ห้องชาร์ปวาล์วน้ำ 5/3", "floor": "5", "seq": 3}, {"id": 46, "code": "5/4", "name": "ห้องชาร์ปวาล์วน้ำ 5/4", "floor": "5", "seq": 4}, {"id": 47, "code": "5/5", "name": "ห้องชาร์ปวาล์วน้ำ 5/5", "floor": "5", "seq": 5}, {"id": 48, "code": "5/6", "name": "ห้องชาร์ปวาล์วน้ำ 5/6", "floor": "5", "seq": 6}, {"id": 49, "code": "5/7", "name": "ห้องชาร์ปวาล์วน้ำ 5/7", "floor": "5", "seq": 7}, {"id": 50, "code": "5/8", "name": "ห้องชาร์ปวาล์วน้ำ 5/8", "floor": "5", "seq": 8}, {"id": 51, "code": "6/1", "name": "ห้องชาร์ปวาล์วน้ำ 6/1", "floor": "6", "seq": 1}, {"id": 52, "code": "6/2", "name": "ห้องชาร์ปวาล์วน้ำ 6/2", "floor": "6", "seq": 2}, {"id": 53, "code": "6/3", "name": "ห้องชาร์ปวาล์วน้ำ 6/3", "floor": "6", "seq": 3}, {"id": 54, "code": "6/4", "name": "ห้องชาร์ปวาล์วน้ำ 6/4", "floor": "6", "seq": 4}, {"id": 55, "code": "6/5", "name": "ห้องชาร์ปวาล์วน้ำ 6/5", "floor": "6", "seq": 5}, {"id": 56, "code": "6/6", "name": "ห้องชาร์ปวาล์วน้ำ 6/6", "floor": "6", "seq": 6}, {"id": 57, "code": "6/7", "name": "ห้องชาร์ปวาล์วน้ำ 6/7", "floor": "6", "seq": 7}, {"id": 58, "code": "6/8", "name": "ห้องชาร์ปวาล์วน้ำ 6/8", "floor": "6", "seq": 8}, {"id": 59, "code": "6/9", "name": "ห้องชาร์ปวาล์วน้ำ 6/9", "floor": "6", "seq": 9}, {"id": 60, "code": "7/1", "name": "ห้องชาร์ปวาล์วน้ำ 7/1", "floor": "7", "seq": 1}, {"id": 61, "code": "7/2", "name": "ห้องชาร์ปวาล์วน้ำ 7/2", "floor": "7", "seq": 2}, {"id": 62, "code": "7/3", "name": "ห้องชาร์ปวาล์วน้ำ 7/3", "floor": "7", "seq": 3}, {"id": 63, "code": "7/4", "name": "ห้องชาร์ปวาล์วน้ำ 7/4", "floor": "7", "seq": 4}, {"id": 64, "code": "7/5", "name": "ห้องชาร์ปวาล์วน้ำ 7/5", "floor": "7", "seq": 5}, {"id": 65, "code": "7/6", "name": "ห้องชาร์ปวาล์วน้ำ 7/6", "floor": "7", "seq": 6}, {"id": 66, "code": "7/7", "name": "ห้องชาร์ปวาล์วน้ำ 7/7", "floor": "7", "seq": 7}, {"id": 67, "code": "7/8", "name": "ห้องชาร์ปวาล์วน้ำ 7/8", "floor": "7", "seq": 8}, {"id": 68, "code": "8/1", "name": "ห้องชาร์ปวาล์วน้ำ 8/1", "floor": "8", "seq": 1}, {"id": 69, "code": "8/2", "name": "ห้องชาร์ปวาล์วน้ำ 8/2", "floor": "8", "seq": 2}, {"id": 70, "code": "8/3", "name": "ห้องชาร์ปวาล์วน้ำ 8/3", "floor": "8", "seq": 3}, {"id": 71, "code": "8/4", "name": "ห้องชาร์ปวาล์วน้ำ 8/4", "floor": "8", "seq": 4}, {"id": 72, "code": "8/5", "name": "ห้องชาร์ปวาล์วน้ำ 8/5", "floor": "8", "seq": 5}, {"id": 73, "code": "8/6", "name": "ห้องชาร์ปวาล์วน้ำ 8/6", "floor": "8", "seq": 6}, {"id": 74, "code": "8/7", "name": "ห้องชาร์ปวาล์วน้ำ 8/7", "floor": "8", "seq": 7}, {"id": 75, "code": "8/8", "name": "ห้องชาร์ปวาล์วน้ำ 8/8", "floor": "8", "seq": 8}, {"id": 76, "code": "8/9", "name": "ห้องชาร์ปวาล์วน้ำ 8/9", "floor": "8", "seq": 9}, {"id": 77, "code": "8/10", "name": "ห้องชาร์ปวาล์วน้ำ 8/10", "floor": "8", "seq": 10}, {"id": 78, "code": "8/11", "name": "ห้องชาร์ปวาล์วน้ำ 8/11", "floor": "8", "seq": 11}, {"id": 79, "code": "9/1", "name": "ห้องชาร์ปวาล์วน้ำ 9/1", "floor": "9", "seq": 1}, {"id": 80, "code": "9/2", "name": "ห้องชาร์ปวาล์วน้ำ 9/2", "floor": "9", "seq": 2}, {"id": 81, "code": "9/3", "name": "ห้องชาร์ปวาล์วน้ำ 9/3", "floor": "9", "seq": 3}, {"id": 82, "code": "9/4", "name": "ห้องชาร์ปวาล์วน้ำ 9/4", "floor": "9", "seq": 4}, {"id": 83, "code": "9/5", "name": "ห้องชาร์ปวาล์วน้ำ 9/5", "floor": "9", "seq": 5}, {"id": 84, "code": "9/6", "name": "ห้องชาร์ปวาล์วน้ำ 9/6", "floor": "9", "seq": 6}, {"id": 85, "code": "9/7", "name": "ห้องชาร์ปวาล์วน้ำ 9/7", "floor": "9", "seq": 7}, {"id": 86, "code": "9/8", "name": "ห้องชาร์ปวาล์วน้ำ 9/8", "floor": "9", "seq": 8}, {"id": 87, "code": "9/9", "name": "ห้องชาร์ปวาล์วน้ำ 9/9", "floor": "9", "seq": 9}, {"id": 88, "code": "9/10", "name": "ห้องชาร์ปวาล์วน้ำ 9/10", "floor": "9", "seq": 10}, {"id": 89, "code": "10/1", "name": "ห้องชาร์ปวาล์วน้ำ 10/1", "floor": "10", "seq": 1}, {"id": 90, "code": "10/2", "name": "ห้องชาร์ปวาล์วน้ำ 10/2", "floor": "10", "seq": 2}, {"id": 91, "code": "10/3", "name": "ห้องชาร์ปวาล์วน้ำ 10/3", "floor": "10", "seq": 3}, {"id": 92, "code": "10/4", "name": "ห้องชาร์ปวาล์วน้ำ 10/4", "floor": "10", "seq": 4}, {"id": 93, "code": "10/5", "name": "ห้องชาร์ปวาล์วน้ำ 10/5", "floor": "10", "seq": 5}, {"id": 94, "code": "10/6", "name": "ห้องชาร์ปวาล์วน้ำ 10/6", "floor": "10", "seq": 6}, {"id": 95, "code": "10/7", "name": "ห้องชาร์ปวาล์วน้ำ 10/7", "floor": "10", "seq": 7}, {"id": 96, "code": "10/8", "name": "ห้องชาร์ปวาล์วน้ำ 10/8", "floor": "10", "seq": 8}, {"id": 97, "code": "10/9", "name": "ห้องชาร์ปวาล์วน้ำ 10/9", "floor": "10", "seq": 9}, {"id": 98, "code": "10/10", "name": "ห้องชาร์ปวาล์วน้ำ 10/10", "floor": "10", "seq": 10}, {"id": 99, "code": "10/11", "name": "ห้องชาร์ปวาล์วน้ำ 10/11", "floor": "10", "seq": 11}, {"id": 100, "code": "11/1", "name": "ห้องชาร์ปวาล์วน้ำ 11/1", "floor": "11", "seq": 1}, {"id": 101, "code": "11/2", "name": "ห้องชาร์ปวาล์วน้ำ 11/2", "floor": "11", "seq": 2}, {"id": 102, "code": "11/3", "name": "ห้องชาร์ปวาล์วน้ำ 11/3", "floor": "11", "seq": 3}, {"id": 103, "code": "11/4", "name": "ห้องชาร์ปวาล์วน้ำ 11/4", "floor": "11", "seq": 4}, {"id": 104, "code": "11/5", "name": "ห้องชาร์ปวาล์วน้ำ 11/5", "floor": "11", "seq": 5}, {"id": 105, "code": "11/6", "name": "ห้องชาร์ปวาล์วน้ำ 11/6", "floor": "11", "seq": 6}, {"id": 106, "code": "11/7", "name": "ห้องชาร์ปวาล์วน้ำ 11/7", "floor": "11", "seq": 7}, {"id": 107, "code": "11/8", "name": "ห้องชาร์ปวาล์วน้ำ 11/8", "floor": "11", "seq": 8}, {"id": 108, "code": "11/9", "name": "ห้องชาร์ปวาล์วน้ำ 11/9", "floor": "11", "seq": 9}, {"id": 109, "code": "12/1", "name": "ห้องชาร์ปวาล์วน้ำ 12/1", "floor": "12", "seq": 1}, {"id": 110, "code": "12/2", "name": "ห้องชาร์ปวาล์วน้ำ 12/2", "floor": "12", "seq": 2}, {"id": 111, "code": "12/3", "name": "ห้องชาร์ปวาล์วน้ำ 12/3", "floor": "12", "seq": 3}, {"id": 112, "code": "12/4", "name": "ห้องชาร์ปวาล์วน้ำ 12/4", "floor": "12", "seq": 4}, {"id": 113, "code": "12/5", "name": "ห้องชาร์ปวาล์วน้ำ 12/5", "floor": "12", "seq": 5}, {"id": 114, "code": "12/6", "name": "ห้องชาร์ปวาล์วน้ำ 12/6", "floor": "12", "seq": 6}, {"id": 115, "code": "12/7", "name": "ห้องชาร์ปวาล์วน้ำ 12/7", "floor": "12", "seq": 7}, {"id": 116, "code": "12/8", "name": "ห้องชาร์ปวาล์วน้ำ 12/8", "floor": "12", "seq": 8}, {"id": 117, "code": "12/9", "name": "ห้องชาร์ปวาล์วน้ำ 12/9", "floor": "12", "seq": 9}, {"id": 118, "code": "12/10", "name": "ห้องชาร์ปวาล์วน้ำ 12/10", "floor": "12", "seq": 10}, {"id": 119, "code": "13/1", "name": "ห้องชาร์ปวาล์วน้ำ 13/1", "floor": "13", "seq": 1}, {"id": 120, "code": "13/2", "name": "ห้องชาร์ปวาล์วน้ำ 13/2", "floor": "13", "seq": 2}, {"id": 121, "code": "13/3", "name": "ห้องชาร์ปวาล์วน้ำ 13/3", "floor": "13", "seq": 3}, {"id": 122, "code": "13/4", "name": "ห้องชาร์ปวาล์วน้ำ 13/4", "floor": "13", "seq": 4}, {"id": 123, "code": "13/5", "name": "ห้องชาร์ปวาล์วน้ำ 13/5", "floor": "13", "seq": 5}, {"id": 124, "code": "13/6", "name": "ห้องชาร์ปวาล์วน้ำ 13/6", "floor": "13", "seq": 6}, {"id": 125, "code": "13/7", "name": "ห้องชาร์ปวาล์วน้ำ 13/7", "floor": "13", "seq": 7}, {"id": 126, "code": "13/8", "name": "ห้องชาร์ปวาล์วน้ำ 13/8", "floor": "13", "seq": 8}, {"id": 127, "code": "13/9", "name": "ห้องชาร์ปวาล์วน้ำ 13/9", "floor": "13", "seq": 9}, {"id": 128, "code": "13/10", "name": "ห้องชาร์ปวาล์วน้ำ 13/10", "floor": "13", "seq": 10}, {"id": 129, "code": "13/11", "name": "ห้องชาร์ปวาล์วน้ำ 13/11", "floor": "13", "seq": 11}, {"id": 130, "code": "14/1", "name": "ห้องชาร์ปวาล์วน้ำ 14/1", "floor": "14", "seq": 1}, {"id": 131, "code": "14/2", "name": "ห้องชาร์ปวาล์วน้ำ 14/2", "floor": "14", "seq": 2}, {"id": 132, "code": "14/3", "name": "ห้องชาร์ปวาล์วน้ำ 14/3", "floor": "14", "seq": 3}, {"id": 133, "code": "14/4", "name": "ห้องชาร์ปวาล์วน้ำ 14/4", "floor": "14", "seq": 4}, {"id": 134, "code": "15/1", "name": "ห้องชาร์ปวาล์วน้ำ 15/1", "floor": "15", "seq": 1}, {"id": 135, "code": "15/2", "name": "ห้องชาร์ปวาล์วน้ำ 15/2", "floor": "15", "seq": 2}, {"id": 136, "code": "15/3", "name": "ห้องชาร์ปวาล์วน้ำ 15/3", "floor": "15", "seq": 3}, {"id": 137, "code": "15/4", "name": "ห้องชาร์ปวาล์วน้ำ 15/4", "floor": "15", "seq": 4}, {"id": 138, "code": "15/5", "name": "ห้องชาร์ปวาล์วน้ำ 15/5", "floor": "15", "seq": 5}, {"id": 139, "code": "15/6", "name": "ห้องชาร์ปวาล์วน้ำ 15/6", "floor": "15", "seq": 6}, {"id": 140, "code": "15/7", "name": "ห้องชาร์ปวาล์วน้ำ 15/7", "floor": "15", "seq": 7}, {"id": 141, "code": "15/8", "name": "ห้องชาร์ปวาล์วน้ำ 15/8", "floor": "15", "seq": 8}, {"id": 142, "code": "15/9", "name": "ห้องชาร์ปวาล์วน้ำ 15/9", "floor": "15", "seq": 9}, {"id": 143, "code": "15/10", "name": "ห้องชาร์ปวาล์วน้ำ 15/10", "floor": "15", "seq": 10}, {"id": 144, "code": "15/11", "name": "ห้องชาร์ปวาล์วน้ำ 15/11", "floor": "15", "seq": 11}, {"id": 145, "code": "15/12", "name": "ห้องชาร์ปวาล์วน้ำ 15/12", "floor": "15", "seq": 12}, {"id": 146, "code": "15/13", "name": "ห้องชาร์ปวาล์วน้ำ 15/13", "floor": "15", "seq": 13}, {"id": 147, "code": "15/14", "name": "ห้องชาร์ปวาล์วน้ำ 15/14", "floor": "15", "seq": 14}, {"id": 148, "code": "15/15", "name": "ห้องชาร์ปวาล์วน้ำ 15/15", "floor": "15", "seq": 15}, {"id": 149, "code": "15/16", "name": "ห้องชาร์ปวาล์วน้ำ 15/16", "floor": "15", "seq": 16}, {"id": 150, "code": "15/17", "name": "ห้องชาร์ปวาล์วน้ำ 15/17", "floor": "15", "seq": 17}, {"id": 151, "code": "15/18", "name": "ห้องชาร์ปวาล์วน้ำ 15/18", "floor": "15", "seq": 18}, {"id": 152, "code": "15/19", "name": "ห้องชาร์ปวาล์วน้ำ 15/19", "floor": "15", "seq": 19}, {"id": 153, "code": "15/20", "name": "ห้องชาร์ปวาล์วน้ำ 15/20", "floor": "15", "seq": 20}, {"id": 154, "code": "15/21", "name": "ห้องชาร์ปวาล์วน้ำ 15/21", "floor": "15", "seq": 21}, {"id": 155, "code": "15/22", "name": "ห้องชาร์ปวาล์วน้ำ 15/22", "floor": "15", "seq": 22}, {"id": 156, "code": "15/23", "name": "ห้องชาร์ปวาล์วน้ำ 15/23", "floor": "15", "seq": 23}, {"id": 157, "code": "15/24", "name": "ห้องชาร์ปวาล์วน้ำ 15/24", "floor": "15", "seq": 24}, {"id": 158, "code": "15/25", "name": "ห้องชาร์ปวาล์วน้ำ 15/25", "floor": "15", "seq": 25}, {"id": 159, "code": "15/26", "name": "ห้องชาร์ปวาล์วน้ำ 15/26", "floor": "15", "seq": 26}, {"id": 160, "code": "15/27", "name": "ห้องชาร์ปวาล์วน้ำ 15/27", "floor": "15", "seq": 27}, {"id": 161, "code": "15/28", "name": "ห้องชาร์ปวาล์วน้ำ 15/28", "floor": "15", "seq": 28}, {"id": 162, "code": "15/29", "name": "ห้องชาร์ปวาล์วน้ำ 15/29", "floor": "15", "seq": 29}, {"id": 163, "code": "15/30", "name": "ห้องชาร์ปวาล์วน้ำ 15/30", "floor": "15", "seq": 30}, {"id": 164, "code": "15/31", "name": "ห้องชาร์ปวาล์วน้ำ 15/31", "floor": "15", "seq": 31}, {"id": 165, "code": "15/32", "name": "ห้องชาร์ปวาล์วน้ำ 15/32", "floor": "15", "seq": 32}, {"id": 166, "code": "15/33", "name": "ห้องชาร์ปวาล์วน้ำ 15/33", "floor": "15", "seq": 33}, {"id": 167, "code": "15/34", "name": "ห้องชาร์ปวาล์วน้ำ 15/34", "floor": "15", "seq": 34}, {"id": 168, "code": "15/35", "name": "ห้องชาร์ปวาล์วน้ำ 15/35", "floor": "15", "seq": 35}, {"id": 169, "code": "15/36", "name": "ห้องชาร์ปวาล์วน้ำ 15/36", "floor": "15", "seq": 36}, {"id": 170, "code": "15/37", "name": "ห้องชาร์ปวาล์วน้ำ 15/37", "floor": "15", "seq": 37}, {"id": 171, "code": "16/1", "name": "ห้องชาร์ปวาล์วน้ำ 16/1", "floor": "16", "seq": 1}, {"id": 172, "code": "16/2", "name": "ห้องชาร์ปวาล์วน้ำ 16/2", "floor": "16", "seq": 2}, {"id": 173, "code": "16/3", "name": "ห้องชาร์ปวาล์วน้ำ 16/3", "floor": "16", "seq": 3}, {"id": 174, "code": "16/4", "name": "ห้องชาร์ปวาล์วน้ำ 16/4", "floor": "16", "seq": 4}, {"id": 175, "code": "16/5", "name": "ห้องชาร์ปวาล์วน้ำ 16/5", "floor": "16", "seq": 5}, {"id": 176, "code": "16/6", "name": "ห้องชาร์ปวาล์วน้ำ 16/6", "floor": "16", "seq": 6}, {"id": 177, "code": "16/7", "name": "ห้องชาร์ปวาล์วน้ำ 16/7", "floor": "16", "seq": 7}, {"id": 178, "code": "16/8", "name": "ห้องชาร์ปวาล์วน้ำ 16/8", "floor": "16", "seq": 8}, {"id": 179, "code": "16/9", "name": "ห้องชาร์ปวาล์วน้ำ 16/9", "floor": "16", "seq": 9}, {"id": 180, "code": "16/10", "name": "ห้องชาร์ปวาล์วน้ำ 16/10", "floor": "16", "seq": 10}, {"id": 181, "code": "16/11", "name": "ห้องชาร์ปวาล์วน้ำ 16/11", "floor": "16", "seq": 11}, {"id": 182, "code": "16/12", "name": "ห้องชาร์ปวาล์วน้ำ 16/12", "floor": "16", "seq": 12}, {"id": 183, "code": "16/13", "name": "ห้องชาร์ปวาล์วน้ำ 16/13", "floor": "16", "seq": 13}, {"id": 184, "code": "16/14", "name": "ห้องชาร์ปวาล์วน้ำ 16/14", "floor": "16", "seq": 14}, {"id": 185, "code": "16/15", "name": "ห้องชาร์ปวาล์วน้ำ 16/15", "floor": "16", "seq": 15}, {"id": 186, "code": "16/16", "name": "ห้องชาร์ปวาล์วน้ำ 16/16", "floor": "16", "seq": 16}, {"id": 187, "code": "16/17", "name": "ห้องชาร์ปวาล์วน้ำ 16/17", "floor": "16", "seq": 17}, {"id": 188, "code": "16/18", "name": "ห้องชาร์ปวาล์วน้ำ 16/18", "floor": "16", "seq": 18}, {"id": 189, "code": "16/19", "name": "ห้องชาร์ปวาล์วน้ำ 16/19", "floor": "16", "seq": 19}, {"id": 190, "code": "16/20", "name": "ห้องชาร์ปวาล์วน้ำ 16/20", "floor": "16", "seq": 20}, {"id": 191, "code": "16/21", "name": "ห้องชาร์ปวาล์วน้ำ 16/21", "floor": "16", "seq": 21}, {"id": 192, "code": "16/22", "name": "ห้องชาร์ปวาล์วน้ำ 16/22", "floor": "16", "seq": 22}, {"id": 193, "code": "16/23", "name": "ห้องชาร์ปวาล์วน้ำ 16/23", "floor": "16", "seq": 23}, {"id": 194, "code": "16/24", "name": "ห้องชาร์ปวาล์วน้ำ 16/24", "floor": "16", "seq": 24}, {"id": 195, "code": "16/25", "name": "ห้องชาร์ปวาล์วน้ำ 16/25", "floor": "16", "seq": 25}, {"id": 196, "code": "16/26", "name": "ห้องชาร์ปวาล์วน้ำ 16/26", "floor": "16", "seq": 26}, {"id": 197, "code": "16/27", "name": "ห้องชาร์ปวาล์วน้ำ 16/27", "floor": "16", "seq": 27}, {"id": 198, "code": "16/28", "name": "ห้องชาร์ปวาล์วน้ำ 16/28", "floor": "16", "seq": 28}, {"id": 199, "code": "16/29", "name": "ห้องชาร์ปวาล์วน้ำ 16/29", "floor": "16", "seq": 29}, {"id": 200, "code": "16/30", "name": "ห้องชาร์ปวาล์วน้ำ 16/30", "floor": "16", "seq": 30}, {"id": 201, "code": "16/31", "name": "ห้องชาร์ปวาล์วน้ำ 16/31", "floor": "16", "seq": 31}, {"id": 202, "code": "16/32", "name": "ห้องชาร์ปวาล์วน้ำ 16/32", "floor": "16", "seq": 32}, {"id": 203, "code": "16/33", "name": "ห้องชาร์ปวาล์วน้ำ 16/33", "floor": "16", "seq": 33}, {"id": 204, "code": "16/34", "name": "ห้องชาร์ปวาล์วน้ำ 16/34", "floor": "16", "seq": 34}, {"id": 205, "code": "16/35", "name": "ห้องชาร์ปวาล์วน้ำ 16/35", "floor": "16", "seq": 35}, {"id": 206, "code": "16/36", "name": "ห้องชาร์ปวาล์วน้ำ 16/36", "floor": "16", "seq": 36}, {"id": 207, "code": "16/37", "name": "ห้องชาร์ปวาล์วน้ำ 16/37", "floor": "16", "seq": 37}, {"id": 208, "code": "16/38", "name": "ห้องชาร์ปวาล์วน้ำ 16/38", "floor": "16", "seq": 38}, {"id": 209, "code": "16/39", "name": "ห้องชาร์ปวาล์วน้ำ 16/39", "floor": "16", "seq": 39}, {"id": 210, "code": "16/40", "name": "ห้องชาร์ปวาล์วน้ำ 16/40", "floor": "16", "seq": 40}, {"id": 211, "code": "16/41", "name": "ห้องชาร์ปวาล์วน้ำ 16/41", "floor": "16", "seq": 41}, {"id": 212, "code": "16/42", "name": "ห้องชาร์ปวาล์วน้ำ 16/42", "floor": "16", "seq": 42}, {"id": 213, "code": "16/43", "name": "ห้องชาร์ปวาล์วน้ำ 16/43", "floor": "16", "seq": 43}, {"id": 214, "code": "16/44", "name": "ห้องชาร์ปวาล์วน้ำ 16/44", "floor": "16", "seq": 44}, {"id": 215, "code": "17/1", "name": "ห้องชาร์ปวาล์วน้ำ 17/1", "floor": "17", "seq": 1}, {"id": 216, "code": "17/2", "name": "ห้องชาร์ปวาล์วน้ำ 17/2", "floor": "17", "seq": 2}, {"id": 217, "code": "17/3", "name": "ห้องชาร์ปวาล์วน้ำ 17/3", "floor": "17", "seq": 3}, {"id": 218, "code": "17/4", "name": "ห้องชาร์ปวาล์วน้ำ 17/4", "floor": "17", "seq": 4}, {"id": 219, "code": "17/5", "name": "ห้องชาร์ปวาล์วน้ำ 17/5", "floor": "17", "seq": 5}, {"id": 220, "code": "17/6", "name": "ห้องชาร์ปวาล์วน้ำ 17/6", "floor": "17", "seq": 6}, {"id": 221, "code": "17/7", "name": "ห้องชาร์ปวาล์วน้ำ 17/7", "floor": "17", "seq": 7}, {"id": 222, "code": "17/8", "name": "ห้องชาร์ปวาล์วน้ำ 17/8", "floor": "17", "seq": 8}, {"id": 223, "code": "17/9", "name": "ห้องชาร์ปวาล์วน้ำ 17/9", "floor": "17", "seq": 9}, {"id": 224, "code": "17/10", "name": "ห้องชาร์ปวาล์วน้ำ 17/10", "floor": "17", "seq": 10}, {"id": 225, "code": "17/11", "name": "ห้องชาร์ปวาล์วน้ำ 17/11", "floor": "17", "seq": 11}, {"id": 226, "code": "17/12", "name": "ห้องชาร์ปวาล์วน้ำ 17/12", "floor": "17", "seq": 12}, {"id": 227, "code": "17/13", "name": "ห้องชาร์ปวาล์วน้ำ 17/13", "floor": "17", "seq": 13}, {"id": 228, "code": "17/14", "name": "ห้องชาร์ปวาล์วน้ำ 17/14", "floor": "17", "seq": 14}, {"id": 229, "code": "17/15", "name": "ห้องชาร์ปวาล์วน้ำ 17/15", "floor": "17", "seq": 15}, {"id": 230, "code": "17/16", "name": "ห้องชาร์ปวาล์วน้ำ 17/16", "floor": "17", "seq": 16}, {"id": 231, "code": "17/17", "name": "ห้องชาร์ปวาล์วน้ำ 17/17", "floor": "17", "seq": 17}, {"id": 232, "code": "17/18", "name": "ห้องชาร์ปวาล์วน้ำ 17/18", "floor": "17", "seq": 18}, {"id": 233, "code": "17/19", "name": "ห้องชาร์ปวาล์วน้ำ 17/19", "floor": "17", "seq": 19}, {"id": 234, "code": "17/20", "name": "ห้องชาร์ปวาล์วน้ำ 17/20", "floor": "17", "seq": 20}, {"id": 235, "code": "17/21", "name": "ห้องชาร์ปวาล์วน้ำ 17/21", "floor": "17", "seq": 21}, {"id": 236, "code": "17/22", "name": "ห้องชาร์ปวาล์วน้ำ 17/22", "floor": "17", "seq": 22}, {"id": 237, "code": "17/23", "name": "ห้องชาร์ปวาล์วน้ำ 17/23", "floor": "17", "seq": 23}, {"id": 238, "code": "17/24", "name": "ห้องชาร์ปวาล์วน้ำ 17/24", "floor": "17", "seq": 24}, {"id": 239, "code": "17/25", "name": "ห้องชาร์ปวาล์วน้ำ 17/25", "floor": "17", "seq": 25}, {"id": 240, "code": "17/26", "name": "ห้องชาร์ปวาล์วน้ำ 17/26", "floor": "17", "seq": 26}, {"id": 241, "code": "17/27", "name": "ห้องชาร์ปวาล์วน้ำ 17/27", "floor": "17", "seq": 27}, {"id": 242, "code": "17/28", "name": "ห้องชาร์ปวาล์วน้ำ 17/28", "floor": "17", "seq": 28}, {"id": 243, "code": "17/29", "name": "ห้องชาร์ปวาล์วน้ำ 17/29", "floor": "17", "seq": 29}, {"id": 244, "code": "17/30", "name": "ห้องชาร์ปวาล์วน้ำ 17/30", "floor": "17", "seq": 30}, {"id": 245, "code": "17/31", "name": "ห้องชาร์ปวาล์วน้ำ 17/31", "floor": "17", "seq": 31}, {"id": 246, "code": "17/32", "name": "ห้องชาร์ปวาล์วน้ำ 17/32", "floor": "17", "seq": 32}, {"id": 247, "code": "17/33", "name": "ห้องชาร์ปวาล์วน้ำ 17/33", "floor": "17", "seq": 33}, {"id": 248, "code": "17/34", "name": "ห้องชาร์ปวาล์วน้ำ 17/34", "floor": "17", "seq": 34}, {"id": 249, "code": "17/35", "name": "ห้องชาร์ปวาล์วน้ำ 17/35", "floor": "17", "seq": 35}, {"id": 250, "code": "17/36", "name": "ห้องชาร์ปวาล์วน้ำ 17/36", "floor": "17", "seq": 36}, {"id": 251, "code": "17/37", "name": "ห้องชาร์ปวาล์วน้ำ 17/37", "floor": "17", "seq": 37}, {"id": 252, "code": "17/38", "name": "ห้องชาร์ปวาล์วน้ำ 17/38", "floor": "17", "seq": 38}, {"id": 253, "code": "17/39", "name": "ห้องชาร์ปวาล์วน้ำ 17/39", "floor": "17", "seq": 39}, {"id": 254, "code": "17/40", "name": "ห้องชาร์ปวาล์วน้ำ 17/40", "floor": "17", "seq": 40}, {"id": 255, "code": "17/41", "name": "ห้องชาร์ปวาล์วน้ำ 17/41", "floor": "17", "seq": 41}, {"id": 256, "code": "17/42", "name": "ห้องชาร์ปวาล์วน้ำ 17/42", "floor": "17", "seq": 42}, {"id": 257, "code": "17/43", "name": "ห้องชาร์ปวาล์วน้ำ 17/43", "floor": "17", "seq": 43}, {"id": 258, "code": "18/1", "name": "ห้องชาร์ปวาล์วน้ำ 18/1", "floor": "18", "seq": 1}, {"id": 259, "code": "18/2", "name": "ห้องชาร์ปวาล์วน้ำ 18/2", "floor": "18", "seq": 2}, {"id": 260, "code": "18/3", "name": "ห้องชาร์ปวาล์วน้ำ 18/3", "floor": "18", "seq": 3}, {"id": 261, "code": "18/4", "name": "ห้องชาร์ปวาล์วน้ำ 18/4", "floor": "18", "seq": 4}, {"id": 262, "code": "18/5", "name": "ห้องชาร์ปวาล์วน้ำ 18/5", "floor": "18", "seq": 5}, {"id": 263, "code": "18/6", "name": "ห้องชาร์ปวาล์วน้ำ 18/6", "floor": "18", "seq": 6}, {"id": 264, "code": "18/7", "name": "ห้องชาร์ปวาล์วน้ำ 18/7", "floor": "18", "seq": 7}, {"id": 265, "code": "18/8", "name": "ห้องชาร์ปวาล์วน้ำ 18/8", "floor": "18", "seq": 8}, {"id": 266, "code": "18/9", "name": "ห้องชาร์ปวาล์วน้ำ 18/9", "floor": "18", "seq": 9}, {"id": 267, "code": "18/10", "name": "ห้องชาร์ปวาล์วน้ำ 18/10", "floor": "18", "seq": 10}, {"id": 268, "code": "18/11", "name": "ห้องชาร์ปวาล์วน้ำ 18/11", "floor": "18", "seq": 11}, {"id": 269, "code": "18/12", "name": "ห้องชาร์ปวาล์วน้ำ 18/12", "floor": "18", "seq": 12}, {"id": 270, "code": "18/13", "name": "ห้องชาร์ปวาล์วน้ำ 18/13", "floor": "18", "seq": 13}, {"id": 271, "code": "18/14", "name": "ห้องชาร์ปวาล์วน้ำ 18/14", "floor": "18", "seq": 14}, {"id": 272, "code": "18/15", "name": "ห้องชาร์ปวาล์วน้ำ 18/15", "floor": "18", "seq": 15}, {"id": 273, "code": "18/16", "name": "ห้องชาร์ปวาล์วน้ำ 18/16", "floor": "18", "seq": 16}, {"id": 274, "code": "18/17", "name": "ห้องชาร์ปวาล์วน้ำ 18/17", "floor": "18", "seq": 17}, {"id": 275, "code": "18/18", "name": "ห้องชาร์ปวาล์วน้ำ 18/18", "floor": "18", "seq": 18}, {"id": 276, "code": "18/19", "name": "ห้องชาร์ปวาล์วน้ำ 18/19", "floor": "18", "seq": 19}, {"id": 277, "code": "18/20", "name": "ห้องชาร์ปวาล์วน้ำ 18/20", "floor": "18", "seq": 20}, {"id": 278, "code": "18/21", "name": "ห้องชาร์ปวาล์วน้ำ 18/21", "floor": "18", "seq": 21}, {"id": 279, "code": "18/22", "name": "ห้องชาร์ปวาล์วน้ำ 18/22", "floor": "18", "seq": 22}, {"id": 280, "code": "18/23", "name": "ห้องชาร์ปวาล์วน้ำ 18/23", "floor": "18", "seq": 23}, {"id": 281, "code": "18/24", "name": "ห้องชาร์ปวาล์วน้ำ 18/24", "floor": "18", "seq": 24}, {"id": 282, "code": "18/25", "name": "ห้องชาร์ปวาล์วน้ำ 18/25", "floor": "18", "seq": 25}, {"id": 283, "code": "18/26", "name": "ห้องชาร์ปวาล์วน้ำ 18/26", "floor": "18", "seq": 26}, {"id": 284, "code": "18/27", "name": "ห้องชาร์ปวาล์วน้ำ 18/27", "floor": "18", "seq": 27}, {"id": 285, "code": "18/28", "name": "ห้องชาร์ปวาล์วน้ำ 18/28", "floor": "18", "seq": 28}, {"id": 286, "code": "18/29", "name": "ห้องชาร์ปวาล์วน้ำ 18/29", "floor": "18", "seq": 29}, {"id": 287, "code": "18/30", "name": "ห้องชาร์ปวาล์วน้ำ 18/30", "floor": "18", "seq": 30}, {"id": 288, "code": "18/31", "name": "ห้องชาร์ปวาล์วน้ำ 18/31", "floor": "18", "seq": 31}, {"id": 289, "code": "18/32", "name": "ห้องชาร์ปวาล์วน้ำ 18/32", "floor": "18", "seq": 32}, {"id": 290, "code": "18/33", "name": "ห้องชาร์ปวาล์วน้ำ 18/33", "floor": "18", "seq": 33}, {"id": 291, "code": "18/34", "name": "ห้องชาร์ปวาล์วน้ำ 18/34", "floor": "18", "seq": 34}, {"id": 292, "code": "18/35", "name": "ห้องชาร์ปวาล์วน้ำ 18/35", "floor": "18", "seq": 35}, {"id": 293, "code": "18/36", "name": "ห้องชาร์ปวาล์วน้ำ 18/36", "floor": "18", "seq": 36}, {"id": 294, "code": "18/37", "name": "ห้องชาร์ปวาล์วน้ำ 18/37", "floor": "18", "seq": 37}, {"id": 295, "code": "18/38", "name": "ห้องชาร์ปวาล์วน้ำ 18/38", "floor": "18", "seq": 38}, {"id": 296, "code": "18/39", "name": "ห้องชาร์ปวาล์วน้ำ 18/39", "floor": "18", "seq": 39}, {"id": 297, "code": "18/40", "name": "ห้องชาร์ปวาล์วน้ำ 18/40", "floor": "18", "seq": 40}, {"id": 298, "code": "18/41", "name": "ห้องชาร์ปวาล์วน้ำ 18/41", "floor": "18", "seq": 41}, {"id": 299, "code": "18/42", "name": "ห้องชาร์ปวาล์วน้ำ 18/42", "floor": "18", "seq": 42}, {"id": 300, "code": "19/1", "name": "ห้องชาร์ปวาล์วน้ำ 19/1", "floor": "19", "seq": 1}, {"id": 301, "code": "19/2", "name": "ห้องชาร์ปวาล์วน้ำ 19/2", "floor": "19", "seq": 2}, {"id": 302, "code": "19/3", "name": "ห้องชาร์ปวาล์วน้ำ 19/3", "floor": "19", "seq": 3}, {"id": 303, "code": "19/4", "name": "ห้องชาร์ปวาล์วน้ำ 19/4", "floor": "19", "seq": 4}, {"id": 304, "code": "19/5", "name": "ห้องชาร์ปวาล์วน้ำ 19/5", "floor": "19", "seq": 5}, {"id": 305, "code": "19/6", "name": "ห้องชาร์ปวาล์วน้ำ 19/6", "floor": "19", "seq": 6}, {"id": 306, "code": "19/7", "name": "ห้องชาร์ปวาล์วน้ำ 19/7", "floor": "19", "seq": 7}, {"id": 307, "code": "19/8", "name": "ห้องชาร์ปวาล์วน้ำ 19/8", "floor": "19", "seq": 8}, {"id": 308, "code": "19/9", "name": "ห้องชาร์ปวาล์วน้ำ 19/9", "floor": "19", "seq": 9}, {"id": 309, "code": "19/10", "name": "ห้องชาร์ปวาล์วน้ำ 19/10", "floor": "19", "seq": 10}, {"id": 310, "code": "19/11", "name": "ห้องชาร์ปวาล์วน้ำ 19/11", "floor": "19", "seq": 11}, {"id": 311, "code": "19/12", "name": "ห้องชาร์ปวาล์วน้ำ 19/12", "floor": "19", "seq": 12}, {"id": 312, "code": "19/13", "name": "ห้องชาร์ปวาล์วน้ำ 19/13", "floor": "19", "seq": 13}, {"id": 313, "code": "19/14", "name": "ห้องชาร์ปวาล์วน้ำ 19/14", "floor": "19", "seq": 14}, {"id": 314, "code": "19/15", "name": "ห้องชาร์ปวาล์วน้ำ 19/15", "floor": "19", "seq": 15}, {"id": 315, "code": "19/16", "name": "ห้องชาร์ปวาล์วน้ำ 19/16", "floor": "19", "seq": 16}, {"id": 316, "code": "19/17", "name": "ห้องชาร์ปวาล์วน้ำ 19/17", "floor": "19", "seq": 17}, {"id": 317, "code": "19/18", "name": "ห้องชาร์ปวาล์วน้ำ 19/18", "floor": "19", "seq": 18}, {"id": 318, "code": "19/19", "name": "ห้องชาร์ปวาล์วน้ำ 19/19", "floor": "19", "seq": 19}, {"id": 319, "code": "19/20", "name": "ห้องชาร์ปวาล์วน้ำ 19/20", "floor": "19", "seq": 20}, {"id": 320, "code": "19/21", "name": "ห้องชาร์ปวาล์วน้ำ 19/21", "floor": "19", "seq": 21}, {"id": 321, "code": "19/22", "name": "ห้องชาร์ปวาล์วน้ำ 19/22", "floor": "19", "seq": 22}, {"id": 322, "code": "19/23", "name": "ห้องชาร์ปวาล์วน้ำ 19/23", "floor": "19", "seq": 23}, {"id": 323, "code": "19/24", "name": "ห้องชาร์ปวาล์วน้ำ 19/24", "floor": "19", "seq": 24}, {"id": 324, "code": "19/25", "name": "ห้องชาร์ปวาล์วน้ำ 19/25", "floor": "19", "seq": 25}, {"id": 325, "code": "19/26", "name": "ห้องชาร์ปวาล์วน้ำ 19/26", "floor": "19", "seq": 26}, {"id": 326, "code": "19/27", "name": "ห้องชาร์ปวาล์วน้ำ 19/27", "floor": "19", "seq": 27}, {"id": 327, "code": "19/28", "name": "ห้องชาร์ปวาล์วน้ำ 19/28", "floor": "19", "seq": 28}, {"id": 328, "code": "19/29", "name": "ห้องชาร์ปวาล์วน้ำ 19/29", "floor": "19", "seq": 29}, {"id": 329, "code": "19/30", "name": "ห้องชาร์ปวาล์วน้ำ 19/30", "floor": "19", "seq": 30}, {"id": 330, "code": "19/31", "name": "ห้องชาร์ปวาล์วน้ำ 19/31", "floor": "19", "seq": 31}, {"id": 331, "code": "19/32", "name": "ห้องชาร์ปวาล์วน้ำ 19/32", "floor": "19", "seq": 32}, {"id": 332, "code": "19/33", "name": "ห้องชาร์ปวาล์วน้ำ 19/33", "floor": "19", "seq": 33}, {"id": 333, "code": "19/34", "name": "ห้องชาร์ปวาล์วน้ำ 19/34", "floor": "19", "seq": 34}, {"id": 334, "code": "19/35", "name": "ห้องชาร์ปวาล์วน้ำ 19/35", "floor": "19", "seq": 35}, {"id": 335, "code": "19/36", "name": "ห้องชาร์ปวาล์วน้ำ 19/36", "floor": "19", "seq": 36}, {"id": 336, "code": "19/37", "name": "ห้องชาร์ปวาล์วน้ำ 19/37", "floor": "19", "seq": 37}, {"id": 337, "code": "19/38", "name": "ห้องชาร์ปวาล์วน้ำ 19/38", "floor": "19", "seq": 38}, {"id": 338, "code": "19/39", "name": "ห้องชาร์ปวาล์วน้ำ 19/39", "floor": "19", "seq": 39}, {"id": 339, "code": "19/40", "name": "ห้องชาร์ปวาล์วน้ำ 19/40", "floor": "19", "seq": 40}, {"id": 340, "code": "19/41", "name": "ห้องชาร์ปวาล์วน้ำ 19/41", "floor": "19", "seq": 41}, {"id": 341, "code": "19/42", "name": "ห้องชาร์ปวาล์วน้ำ 19/42", "floor": "19", "seq": 42}, {"id": 342, "code": "20/1", "name": "ห้องชาร์ปวาล์วน้ำ 20/1", "floor": "20", "seq": 1}, {"id": 343, "code": "20/2", "name": "ห้องชาร์ปวาล์วน้ำ 20/2", "floor": "20", "seq": 2}, {"id": 344, "code": "20/3", "name": "ห้องชาร์ปวาล์วน้ำ 20/3", "floor": "20", "seq": 3}, {"id": 345, "code": "20/4", "name": "ห้องชาร์ปวาล์วน้ำ 20/4", "floor": "20", "seq": 4}, {"id": 346, "code": "20/5", "name": "ห้องชาร์ปวาล์วน้ำ 20/5", "floor": "20", "seq": 5}, {"id": 347, "code": "20/6", "name": "ห้องชาร์ปวาล์วน้ำ 20/6", "floor": "20", "seq": 6}, {"id": 348, "code": "20/7", "name": "ห้องชาร์ปวาล์วน้ำ 20/7", "floor": "20", "seq": 7}, {"id": 349, "code": "20/8", "name": "ห้องชาร์ปวาล์วน้ำ 20/8", "floor": "20", "seq": 8}, {"id": 350, "code": "20/9", "name": "ห้องชาร์ปวาล์วน้ำ 20/9", "floor": "20", "seq": 9}, {"id": 351, "code": "20/10", "name": "ห้องชาร์ปวาล์วน้ำ 20/10", "floor": "20", "seq": 10}, {"id": 352, "code": "20/11", "name": "ห้องชาร์ปวาล์วน้ำ 20/11", "floor": "20", "seq": 11}, {"id": 353, "code": "20/12", "name": "ห้องชาร์ปวาล์วน้ำ 20/12", "floor": "20", "seq": 12}, {"id": 354, "code": "20/13", "name": "ห้องชาร์ปวาล์วน้ำ 20/13", "floor": "20", "seq": 13}, {"id": 355, "code": "20/14", "name": "ห้องชาร์ปวาล์วน้ำ 20/14", "floor": "20", "seq": 14}, {"id": 356, "code": "20/15", "name": "ห้องชาร์ปวาล์วน้ำ 20/15", "floor": "20", "seq": 15}, {"id": 357, "code": "20/16", "name": "ห้องชาร์ปวาล์วน้ำ 20/16", "floor": "20", "seq": 16}, {"id": 358, "code": "20/17", "name": "ห้องชาร์ปวาล์วน้ำ 20/17", "floor": "20", "seq": 17}, {"id": 359, "code": "20/18", "name": "ห้องชาร์ปวาล์วน้ำ 20/18", "floor": "20", "seq": 18}, {"id": 360, "code": "20/19", "name": "ห้องชาร์ปวาล์วน้ำ 20/19", "floor": "20", "seq": 19}, {"id": 361, "code": "20/20", "name": "ห้องชาร์ปวาล์วน้ำ 20/20", "floor": "20", "seq": 20}, {"id": 362, "code": "20/21", "name": "ห้องชาร์ปวาล์วน้ำ 20/21", "floor": "20", "seq": 21}, {"id": 363, "code": "20/22", "name": "ห้องชาร์ปวาล์วน้ำ 20/22", "floor": "20", "seq": 22}, {"id": 364, "code": "20/23", "name": "ห้องชาร์ปวาล์วน้ำ 20/23", "floor": "20", "seq": 23}, {"id": 365, "code": "20/24", "name": "ห้องชาร์ปวาล์วน้ำ 20/24", "floor": "20", "seq": 24}, {"id": 366, "code": "20/25", "name": "ห้องชาร์ปวาล์วน้ำ 20/25", "floor": "20", "seq": 25}, {"id": 367, "code": "20/26", "name": "ห้องชาร์ปวาล์วน้ำ 20/26", "floor": "20", "seq": 26}, {"id": 368, "code": "20/27", "name": "ห้องชาร์ปวาล์วน้ำ 20/27", "floor": "20", "seq": 27}, {"id": 369, "code": "20/28", "name": "ห้องชาร์ปวาล์วน้ำ 20/28", "floor": "20", "seq": 28}, {"id": 370, "code": "20/29", "name": "ห้องชาร์ปวาล์วน้ำ 20/29", "floor": "20", "seq": 29}, {"id": 371, "code": "20/30", "name": "ห้องชาร์ปวาล์วน้ำ 20/30", "floor": "20", "seq": 30}, {"id": 372, "code": "20/31", "name": "ห้องชาร์ปวาล์วน้ำ 20/31", "floor": "20", "seq": 31}, {"id": 373, "code": "20/32", "name": "ห้องชาร์ปวาล์วน้ำ 20/32", "floor": "20", "seq": 32}, {"id": 374, "code": "20/33", "name": "ห้องชาร์ปวาล์วน้ำ 20/33", "floor": "20", "seq": 33}, {"id": 375, "code": "20/34", "name": "ห้องชาร์ปวาล์วน้ำ 20/34", "floor": "20", "seq": 34}, {"id": 376, "code": "20/35", "name": "ห้องชาร์ปวาล์วน้ำ 20/35", "floor": "20", "seq": 35}, {"id": 377, "code": "20/36", "name": "ห้องชาร์ปวาล์วน้ำ 20/36", "floor": "20", "seq": 36}, {"id": 378, "code": "20/37", "name": "ห้องชาร์ปวาล์วน้ำ 20/37", "floor": "20", "seq": 37}, {"id": 379, "code": "20/38", "name": "ห้องชาร์ปวาล์วน้ำ 20/38", "floor": "20", "seq": 38}, {"id": 380, "code": "20/39", "name": "ห้องชาร์ปวาล์วน้ำ 20/39", "floor": "20", "seq": 39}, {"id": 381, "code": "20/40", "name": "ห้องชาร์ปวาล์วน้ำ 20/40", "floor": "20", "seq": 40}, {"id": 382, "code": "20/41", "name": "ห้องชาร์ปวาล์วน้ำ 20/41", "floor": "20", "seq": 41}, {"id": 383, "code": "20/42", "name": "ห้องชาร์ปวาล์วน้ำ 20/42", "floor": "20", "seq": 42}, {"id": 384, "code": "21/1", "name": "ห้องชาร์ปวาล์วน้ำ 21/1", "floor": "21", "seq": 1}, {"id": 385, "code": "21/2", "name": "ห้องชาร์ปวาล์วน้ำ 21/2", "floor": "21", "seq": 2}, {"id": 386, "code": "21/3", "name": "ห้องชาร์ปวาล์วน้ำ 21/3", "floor": "21", "seq": 3}, {"id": 387, "code": "21/4", "name": "ห้องชาร์ปวาล์วน้ำ 21/4", "floor": "21", "seq": 4}, {"id": 388, "code": "21/5", "name": "ห้องชาร์ปวาล์วน้ำ 21/5", "floor": "21", "seq": 5}, {"id": 389, "code": "21/6", "name": "ห้องชาร์ปวาล์วน้ำ 21/6", "floor": "21", "seq": 6}, {"id": 390, "code": "21/7", "name": "ห้องชาร์ปวาล์วน้ำ 21/7", "floor": "21", "seq": 7}, {"id": 391, "code": "21/8", "name": "ห้องชาร์ปวาล์วน้ำ 21/8", "floor": "21", "seq": 8}, {"id": 392, "code": "21/9", "name": "ห้องชาร์ปวาล์วน้ำ 21/9", "floor": "21", "seq": 9}, {"id": 393, "code": "21/10", "name": "ห้องชาร์ปวาล์วน้ำ 21/10", "floor": "21", "seq": 10}, {"id": 394, "code": "21/11", "name": "ห้องชาร์ปวาล์วน้ำ 21/11", "floor": "21", "seq": 11}, {"id": 395, "code": "21/12", "name": "ห้องชาร์ปวาล์วน้ำ 21/12", "floor": "21", "seq": 12}, {"id": 396, "code": "21/13", "name": "ห้องชาร์ปวาล์วน้ำ 21/13", "floor": "21", "seq": 13}, {"id": 397, "code": "21/14", "name": "ห้องชาร์ปวาล์วน้ำ 21/14", "floor": "21", "seq": 14}, {"id": 398, "code": "21/15", "name": "ห้องชาร์ปวาล์วน้ำ 21/15", "floor": "21", "seq": 15}, {"id": 399, "code": "21/16", "name": "ห้องชาร์ปวาล์วน้ำ 21/16", "floor": "21", "seq": 16}, {"id": 400, "code": "21/17", "name": "ห้องชาร์ปวาล์วน้ำ 21/17", "floor": "21", "seq": 17}, {"id": 401, "code": "21/18", "name": "ห้องชาร์ปวาล์วน้ำ 21/18", "floor": "21", "seq": 18}, {"id": 402, "code": "21/19", "name": "ห้องชาร์ปวาล์วน้ำ 21/19", "floor": "21", "seq": 19}, {"id": 403, "code": "21/20", "name": "ห้องชาร์ปวาล์วน้ำ 21/20", "floor": "21", "seq": 20}, {"id": 404, "code": "21/21", "name": "ห้องชาร์ปวาล์วน้ำ 21/21", "floor": "21", "seq": 21}, {"id": 405, "code": "21/22", "name": "ห้องชาร์ปวาล์วน้ำ 21/22", "floor": "21", "seq": 22}, {"id": 406, "code": "21/23", "name": "ห้องชาร์ปวาล์วน้ำ 21/23", "floor": "21", "seq": 23}, {"id": 407, "code": "21/24", "name": "ห้องชาร์ปวาล์วน้ำ 21/24", "floor": "21", "seq": 24}, {"id": 408, "code": "21/25", "name": "ห้องชาร์ปวาล์วน้ำ 21/25", "floor": "21", "seq": 25}, {"id": 409, "code": "21/26", "name": "ห้องชาร์ปวาล์วน้ำ 21/26", "floor": "21", "seq": 26}, {"id": 410, "code": "21/27", "name": "ห้องชาร์ปวาล์วน้ำ 21/27", "floor": "21", "seq": 27}, {"id": 411, "code": "21/28", "name": "ห้องชาร์ปวาล์วน้ำ 21/28", "floor": "21", "seq": 28}, {"id": 412, "code": "21/29", "name": "ห้องชาร์ปวาล์วน้ำ 21/29", "floor": "21", "seq": 29}, {"id": 413, "code": "21/30", "name": "ห้องชาร์ปวาล์วน้ำ 21/30", "floor": "21", "seq": 30}, {"id": 414, "code": "21/31", "name": "ห้องชาร์ปวาล์วน้ำ 21/31", "floor": "21", "seq": 31}, {"id": 415, "code": "21/32", "name": "ห้องชาร์ปวาล์วน้ำ 21/32", "floor": "21", "seq": 32}, {"id": 416, "code": "21/33", "name": "ห้องชาร์ปวาล์วน้ำ 21/33", "floor": "21", "seq": 33}, {"id": 417, "code": "21/34", "name": "ห้องชาร์ปวาล์วน้ำ 21/34", "floor": "21", "seq": 34}, {"id": 418, "code": "21/35", "name": "ห้องชาร์ปวาล์วน้ำ 21/35", "floor": "21", "seq": 35}, {"id": 419, "code": "21/36", "name": "ห้องชาร์ปวาล์วน้ำ 21/36", "floor": "21", "seq": 36}, {"id": 420, "code": "21/37", "name": "ห้องชาร์ปวาล์วน้ำ 21/37", "floor": "21", "seq": 37}, {"id": 421, "code": "21/38", "name": "ห้องชาร์ปวาล์วน้ำ 21/38", "floor": "21", "seq": 38}, {"id": 422, "code": "22/1", "name": "ห้องชาร์ปวาล์วน้ำ 22/1", "floor": "22", "seq": 1}, {"id": 423, "code": "22/2", "name": "ห้องชาร์ปวาล์วน้ำ 22/2", "floor": "22", "seq": 2}, {"id": 424, "code": "22/3", "name": "ห้องชาร์ปวาล์วน้ำ 22/3", "floor": "22", "seq": 3}, {"id": 425, "code": "22/4", "name": "ห้องชาร์ปวาล์วน้ำ 22/4", "floor": "22", "seq": 4}, {"id": 426, "code": "22/5", "name": "ห้องชาร์ปวาล์วน้ำ 22/5", "floor": "22", "seq": 5}, {"id": 427, "code": "22/6", "name": "ห้องชาร์ปวาล์วน้ำ 22/6", "floor": "22", "seq": 6}, {"id": 428, "code": "22/7", "name": "ห้องชาร์ปวาล์วน้ำ 22/7", "floor": "22", "seq": 7}, {"id": 429, "code": "22/8", "name": "ห้องชาร์ปวาล์วน้ำ 22/8", "floor": "22", "seq": 8}, {"id": 430, "code": "22/9", "name": "ห้องชาร์ปวาล์วน้ำ 22/9", "floor": "22", "seq": 9}, {"id": 431, "code": "22/10", "name": "ห้องชาร์ปวาล์วน้ำ 22/10", "floor": "22", "seq": 10}, {"id": 432, "code": "22/11", "name": "ห้องชาร์ปวาล์วน้ำ 22/11", "floor": "22", "seq": 11}, {"id": 433, "code": "22/12", "name": "ห้องชาร์ปวาล์วน้ำ 22/12", "floor": "22", "seq": 12}, {"id": 434, "code": "22/13", "name": "ห้องชาร์ปวาล์วน้ำ 22/13", "floor": "22", "seq": 13}, {"id": 435, "code": "22/14", "name": "ห้องชาร์ปวาล์วน้ำ 22/14", "floor": "22", "seq": 14}, {"id": 436, "code": "22/15", "name": "ห้องชาร์ปวาล์วน้ำ 22/15", "floor": "22", "seq": 15}, {"id": 437, "code": "22/16", "name": "ห้องชาร์ปวาล์วน้ำ 22/16", "floor": "22", "seq": 16}, {"id": 438, "code": "22/17", "name": "ห้องชาร์ปวาล์วน้ำ 22/17", "floor": "22", "seq": 17}, {"id": 439, "code": "22/18", "name": "ห้องชาร์ปวาล์วน้ำ 22/18", "floor": "22", "seq": 18}, {"id": 440, "code": "22/19", "name": "ห้องชาร์ปวาล์วน้ำ 22/19", "floor": "22", "seq": 19}, {"id": 441, "code": "22/20", "name": "ห้องชาร์ปวาล์วน้ำ 22/20", "floor": "22", "seq": 20}, {"id": 442, "code": "22/21", "name": "ห้องชาร์ปวาล์วน้ำ 22/21", "floor": "22", "seq": 21}, {"id": 443, "code": "22/22", "name": "ห้องชาร์ปวาล์วน้ำ 22/22", "floor": "22", "seq": 22}, {"id": 444, "code": "22/23", "name": "ห้องชาร์ปวาล์วน้ำ 22/23", "floor": "22", "seq": 23}, {"id": 445, "code": "22/24", "name": "ห้องชาร์ปวาล์วน้ำ 22/24", "floor": "22", "seq": 24}, {"id": 446, "code": "22/25", "name": "ห้องชาร์ปวาล์วน้ำ 22/25", "floor": "22", "seq": 25}, {"id": 447, "code": "22/26", "name": "ห้องชาร์ปวาล์วน้ำ 22/26", "floor": "22", "seq": 26}, {"id": 448, "code": "22/27", "name": "ห้องชาร์ปวาล์วน้ำ 22/27", "floor": "22", "seq": 27}, {"id": 449, "code": "22/28", "name": "ห้องชาร์ปวาล์วน้ำ 22/28", "floor": "22", "seq": 28}, {"id": 450, "code": "22/29", "name": "ห้องชาร์ปวาล์วน้ำ 22/29", "floor": "22", "seq": 29}, {"id": 451, "code": "22/30", "name": "ห้องชาร์ปวาล์วน้ำ 22/30", "floor": "22", "seq": 30}, {"id": 452, "code": "22/31", "name": "ห้องชาร์ปวาล์วน้ำ 22/31", "floor": "22", "seq": 31}, {"id": 453, "code": "22/32", "name": "ห้องชาร์ปวาล์วน้ำ 22/32", "floor": "22", "seq": 32}, {"id": 454, "code": "22/33", "name": "ห้องชาร์ปวาล์วน้ำ 22/33", "floor": "22", "seq": 33}, {"id": 455, "code": "22/34", "name": "ห้องชาร์ปวาล์วน้ำ 22/34", "floor": "22", "seq": 34}, {"id": 456, "code": "22/35", "name": "ห้องชาร์ปวาล์วน้ำ 22/35", "floor": "22", "seq": 35}, {"id": 457, "code": "22/36", "name": "ห้องชาร์ปวาล์วน้ำ 22/36", "floor": "22", "seq": 36}, {"id": 458, "code": "22/37", "name": "ห้องชาร์ปวาล์วน้ำ 22/37", "floor": "22", "seq": 37}, {"id": 459, "code": "22/38", "name": "ห้องชาร์ปวาล์วน้ำ 22/38", "floor": "22", "seq": 38}, {"id": 460, "code": "22/39", "name": "ห้องชาร์ปวาล์วน้ำ 22/39", "floor": "22", "seq": 39}, {"id": 461, "code": "22/40", "name": "ห้องชาร์ปวาล์วน้ำ 22/40", "floor": "22", "seq": 40}, {"id": 462, "code": "22/41", "name": "ห้องชาร์ปวาล์วน้ำ 22/41", "floor": "22", "seq": 41}, {"id": 463, "code": "22/42", "name": "ห้องชาร์ปวาล์วน้ำ 22/42", "floor": "22", "seq": 42}, {"id": 464, "code": "22/43", "name": "ห้องชาร์ปวาล์วน้ำ 22/43", "floor": "22", "seq": 43}, {"id": 465, "code": "22/44", "name": "ห้องชาร์ปวาล์วน้ำ 22/44", "floor": "22", "seq": 44}, {"id": 466, "code": "22/45", "name": "ห้องชาร์ปวาล์วน้ำ 22/45", "floor": "22", "seq": 45}, {"id": 467, "code": "22/46", "name": "ห้องชาร์ปวาล์วน้ำ 22/46", "floor": "22", "seq": 46}, {"id": 468, "code": "22/47", "name": "ห้องชาร์ปวาล์วน้ำ 22/47", "floor": "22", "seq": 47}, {"id": 469, "code": "22/48", "name": "ห้องชาร์ปวาล์วน้ำ 22/48", "floor": "22", "seq": 48}, {"id": 470, "code": "23/1", "name": "ห้องชาร์ปวาล์วน้ำ 23/1", "floor": "23", "seq": 1}, {"id": 471, "code": "23/2", "name": "ห้องชาร์ปวาล์วน้ำ 23/2", "floor": "23", "seq": 2}, {"id": 472, "code": "23/3", "name": "ห้องชาร์ปวาล์วน้ำ 23/3", "floor": "23", "seq": 3}, {"id": 473, "code": "23/4", "name": "ห้องชาร์ปวาล์วน้ำ 23/4", "floor": "23", "seq": 4}, {"id": 474, "code": "23/5", "name": "ห้องชาร์ปวาล์วน้ำ 23/5", "floor": "23", "seq": 5}, {"id": 475, "code": "23/6", "name": "ห้องชาร์ปวาล์วน้ำ 23/6", "floor": "23", "seq": 6}, {"id": 476, "code": "23/7", "name": "ห้องชาร์ปวาล์วน้ำ 23/7", "floor": "23", "seq": 7}, {"id": 477, "code": "23/8", "name": "ห้องชาร์ปวาล์วน้ำ 23/8", "floor": "23", "seq": 8}, {"id": 478, "code": "23/9", "name": "ห้องชาร์ปวาล์วน้ำ 23/9", "floor": "23", "seq": 9}, {"id": 479, "code": "23/10", "name": "ห้องชาร์ปวาล์วน้ำ 23/10", "floor": "23", "seq": 10}, {"id": 480, "code": "23/11", "name": "ห้องชาร์ปวาล์วน้ำ 23/11", "floor": "23", "seq": 11}, {"id": 481, "code": "23/12", "name": "ห้องชาร์ปวาล์วน้ำ 23/12", "floor": "23", "seq": 12}, {"id": 482, "code": "23/13", "name": "ห้องชาร์ปวาล์วน้ำ 23/13", "floor": "23", "seq": 13}, {"id": 483, "code": "23/14", "name": "ห้องชาร์ปวาล์วน้ำ 23/14", "floor": "23", "seq": 14}, {"id": 484, "code": "23/15", "name": "ห้องชาร์ปวาล์วน้ำ 23/15", "floor": "23", "seq": 15}, {"id": 485, "code": "23/16", "name": "ห้องชาร์ปวาล์วน้ำ 23/16", "floor": "23", "seq": 16}, {"id": 486, "code": "23/17", "name": "ห้องชาร์ปวาล์วน้ำ 23/17", "floor": "23", "seq": 17}, {"id": 487, "code": "23/18", "name": "ห้องชาร์ปวาล์วน้ำ 23/18", "floor": "23", "seq": 18}, {"id": 488, "code": "23/19", "name": "ห้องชาร์ปวาล์วน้ำ 23/19", "floor": "23", "seq": 19}, {"id": 489, "code": "23/20", "name": "ห้องชาร์ปวาล์วน้ำ 23/20", "floor": "23", "seq": 20}, {"id": 490, "code": "23/21", "name": "ห้องชาร์ปวาล์วน้ำ 23/21", "floor": "23", "seq": 21}, {"id": 491, "code": "23/22", "name": "ห้องชาร์ปวาล์วน้ำ 23/22", "floor": "23", "seq": 22}, {"id": 492, "code": "23/23", "name": "ห้องชาร์ปวาล์วน้ำ 23/23", "floor": "23", "seq": 23}, {"id": 493, "code": "23/24", "name": "ห้องชาร์ปวาล์วน้ำ 23/24", "floor": "23", "seq": 24}, {"id": 494, "code": "23/25", "name": "ห้องชาร์ปวาล์วน้ำ 23/25", "floor": "23", "seq": 25}, {"id": 495, "code": "23/26", "name": "ห้องชาร์ปวาล์วน้ำ 23/26", "floor": "23", "seq": 26}, {"id": 496, "code": "23/27", "name": "ห้องชาร์ปวาล์วน้ำ 23/27", "floor": "23", "seq": 27}, {"id": 497, "code": "23/28", "name": "ห้องชาร์ปวาล์วน้ำ 23/28", "floor": "23", "seq": 28}, {"id": 498, "code": "23/29", "name": "ห้องชาร์ปวาล์วน้ำ 23/29", "floor": "23", "seq": 29}, {"id": 499, "code": "23/30", "name": "ห้องชาร์ปวาล์วน้ำ 23/30", "floor": "23", "seq": 30}, {"id": 500, "code": "23/31", "name": "ห้องชาร์ปวาล์วน้ำ 23/31", "floor": "23", "seq": 31}, {"id": 501, "code": "23/32", "name": "ห้องชาร์ปวาล์วน้ำ 23/32", "floor": "23", "seq": 32}, {"id": 502, "code": "23/33", "name": "ห้องชาร์ปวาล์วน้ำ 23/33", "floor": "23", "seq": 33}, {"id": 503, "code": "23/34", "name": "ห้องชาร์ปวาล์วน้ำ 23/34", "floor": "23", "seq": 34}, {"id": 504, "code": "23/35", "name": "ห้องชาร์ปวาล์วน้ำ 23/35", "floor": "23", "seq": 35}, {"id": 505, "code": "23/36", "name": "ห้องชาร์ปวาล์วน้ำ 23/36", "floor": "23", "seq": 36}, {"id": 506, "code": "23/37", "name": "ห้องชาร์ปวาล์วน้ำ 23/37", "floor": "23", "seq": 37}, {"id": 507, "code": "23/38", "name": "ห้องชาร์ปวาล์วน้ำ 23/38", "floor": "23", "seq": 38}, {"id": 508, "code": "23/39", "name": "ห้องชาร์ปวาล์วน้ำ 23/39", "floor": "23", "seq": 39}, {"id": 509, "code": "23/40", "name": "ห้องชาร์ปวาล์วน้ำ 23/40", "floor": "23", "seq": 40}, {"id": 510, "code": "23/41", "name": "ห้องชาร์ปวาล์วน้ำ 23/41", "floor": "23", "seq": 41}, {"id": 511, "code": "23/42", "name": "ห้องชาร์ปวาล์วน้ำ 23/42", "floor": "23", "seq": 42}, {"id": 512, "code": "23/43", "name": "ห้องชาร์ปวาล์วน้ำ 23/43", "floor": "23", "seq": 43}, {"id": 513, "code": "23/44", "name": "ห้องชาร์ปวาล์วน้ำ 23/44", "floor": "23", "seq": 44}, {"id": 514, "code": "23/45", "name": "ห้องชาร์ปวาล์วน้ำ 23/45", "floor": "23", "seq": 45}, {"id": 515, "code": "23/46", "name": "ห้องชาร์ปวาล์วน้ำ 23/46", "floor": "23", "seq": 46}, {"id": 516, "code": "23/47", "name": "ห้องชาร์ปวาล์วน้ำ 23/47", "floor": "23", "seq": 47}, {"id": 517, "code": "24/1", "name": "ห้องชาร์ปวาล์วน้ำ 24/1", "floor": "24", "seq": 1}, {"id": 518, "code": "24/2", "name": "ห้องชาร์ปวาล์วน้ำ 24/2", "floor": "24", "seq": 2}, {"id": 519, "code": "24/3", "name": "ห้องชาร์ปวาล์วน้ำ 24/3", "floor": "24", "seq": 3}, {"id": 520, "code": "24/4", "name": "ห้องชาร์ปวาล์วน้ำ 24/4", "floor": "24", "seq": 4}, {"id": 521, "code": "24/5", "name": "ห้องชาร์ปวาล์วน้ำ 24/5", "floor": "24", "seq": 5}, {"id": 522, "code": "24/6", "name": "ห้องชาร์ปวาล์วน้ำ 24/6", "floor": "24", "seq": 6}, {"id": 523, "code": "24/7", "name": "ห้องชาร์ปวาล์วน้ำ 24/7", "floor": "24", "seq": 7}, {"id": 524, "code": "24/8", "name": "ห้องชาร์ปวาล์วน้ำ 24/8", "floor": "24", "seq": 8}, {"id": 525, "code": "24/9", "name": "ห้องชาร์ปวาล์วน้ำ 24/9", "floor": "24", "seq": 9}, {"id": 526, "code": "24/10", "name": "ห้องชาร์ปวาล์วน้ำ 24/10", "floor": "24", "seq": 10}, {"id": 527, "code": "24/11", "name": "ห้องชาร์ปวาล์วน้ำ 24/11", "floor": "24", "seq": 11}, {"id": 528, "code": "24/12", "name": "ห้องชาร์ปวาล์วน้ำ 24/12", "floor": "24", "seq": 12}, {"id": 529, "code": "24/13", "name": "ห้องชาร์ปวาล์วน้ำ 24/13", "floor": "24", "seq": 13}, {"id": 530, "code": "24/14", "name": "ห้องชาร์ปวาล์วน้ำ 24/14", "floor": "24", "seq": 14}, {"id": 531, "code": "24/15", "name": "ห้องชาร์ปวาล์วน้ำ 24/15", "floor": "24", "seq": 15}, {"id": 532, "code": "24/16", "name": "ห้องชาร์ปวาล์วน้ำ 24/16", "floor": "24", "seq": 16}, {"id": 533, "code": "24/17", "name": "ห้องชาร์ปวาล์วน้ำ 24/17", "floor": "24", "seq": 17}, {"id": 534, "code": "24/18", "name": "ห้องชาร์ปวาล์วน้ำ 24/18", "floor": "24", "seq": 18}, {"id": 535, "code": "24/19", "name": "ห้องชาร์ปวาล์วน้ำ 24/19", "floor": "24", "seq": 19}, {"id": 536, "code": "24/20", "name": "ห้องชาร์ปวาล์วน้ำ 24/20", "floor": "24", "seq": 20}, {"id": 537, "code": "24/21", "name": "ห้องชาร์ปวาล์วน้ำ 24/21", "floor": "24", "seq": 21}, {"id": 538, "code": "24/22", "name": "ห้องชาร์ปวาล์วน้ำ 24/22", "floor": "24", "seq": 22}, {"id": 539, "code": "24/23", "name": "ห้องชาร์ปวาล์วน้ำ 24/23", "floor": "24", "seq": 23}, {"id": 540, "code": "24/24", "name": "ห้องชาร์ปวาล์วน้ำ 24/24", "floor": "24", "seq": 24}, {"id": 541, "code": "24/25", "name": "ห้องชาร์ปวาล์วน้ำ 24/25", "floor": "24", "seq": 25}, {"id": 542, "code": "24/26", "name": "ห้องชาร์ปวาล์วน้ำ 24/26", "floor": "24", "seq": 26}, {"id": 543, "code": "24/27", "name": "ห้องชาร์ปวาล์วน้ำ 24/27", "floor": "24", "seq": 27}, {"id": 544, "code": "24/28", "name": "ห้องชาร์ปวาล์วน้ำ 24/28", "floor": "24", "seq": 28}, {"id": 545, "code": "24/29", "name": "ห้องชาร์ปวาล์วน้ำ 24/29", "floor": "24", "seq": 29}, {"id": 546, "code": "24/30", "name": "ห้องชาร์ปวาล์วน้ำ 24/30", "floor": "24", "seq": 30}, {"id": 547, "code": "24/31", "name": "ห้องชาร์ปวาล์วน้ำ 24/31", "floor": "24", "seq": 31}, {"id": 548, "code": "24/32", "name": "ห้องชาร์ปวาล์วน้ำ 24/32", "floor": "24", "seq": 32}, {"id": 549, "code": "24/33", "name": "ห้องชาร์ปวาล์วน้ำ 24/33", "floor": "24", "seq": 33}, {"id": 550, "code": "24/34", "name": "ห้องชาร์ปวาล์วน้ำ 24/34", "floor": "24", "seq": 34}, {"id": 551, "code": "24/35", "name": "ห้องชาร์ปวาล์วน้ำ 24/35", "floor": "24", "seq": 35}, {"id": 552, "code": "24/36", "name": "ห้องชาร์ปวาล์วน้ำ 24/36", "floor": "24", "seq": 36}, {"id": 553, "code": "24/37", "name": "ห้องชาร์ปวาล์วน้ำ 24/37", "floor": "24", "seq": 37}, {"id": 554, "code": "24/38", "name": "ห้องชาร์ปวาล์วน้ำ 24/38", "floor": "24", "seq": 38}, {"id": 555, "code": "24/39", "name": "ห้องชาร์ปวาล์วน้ำ 24/39", "floor": "24", "seq": 39}, {"id": 556, "code": "24/40", "name": "ห้องชาร์ปวาล์วน้ำ 24/40", "floor": "24", "seq": 40}, {"id": 557, "code": "24/41", "name": "ห้องชาร์ปวาล์วน้ำ 24/41", "floor": "24", "seq": 41}, {"id": 558, "code": "24/42", "name": "ห้องชาร์ปวาล์วน้ำ 24/42", "floor": "24", "seq": 42}, {"id": 559, "code": "24/43", "name": "ห้องชาร์ปวาล์วน้ำ 24/43", "floor": "24", "seq": 43}, {"id": 560, "code": "24/44", "name": "ห้องชาร์ปวาล์วน้ำ 24/44", "floor": "24", "seq": 44}, {"id": 561, "code": "25/1", "name": "ห้องชาร์ปวาล์วน้ำ 25/1", "floor": "25", "seq": 1}, {"id": 562, "code": "25/2", "name": "ห้องชาร์ปวาล์วน้ำ 25/2", "floor": "25", "seq": 2}, {"id": 563, "code": "25/3", "name": "ห้องชาร์ปวาล์วน้ำ 25/3", "floor": "25", "seq": 3}, {"id": 564, "code": "25/4", "name": "ห้องชาร์ปวาล์วน้ำ 25/4", "floor": "25", "seq": 4}, {"id": 565, "code": "25/5", "name": "ห้องชาร์ปวาล์วน้ำ 25/5", "floor": "25", "seq": 5}, {"id": 566, "code": "25/6", "name": "ห้องชาร์ปวาล์วน้ำ 25/6", "floor": "25", "seq": 6}, {"id": 567, "code": "25/7", "name": "ห้องชาร์ปวาล์วน้ำ 25/7", "floor": "25", "seq": 7}, {"id": 568, "code": "25/8", "name": "ห้องชาร์ปวาล์วน้ำ 25/8", "floor": "25", "seq": 8}, {"id": 569, "code": "25/9", "name": "ห้องชาร์ปวาล์วน้ำ 25/9", "floor": "25", "seq": 9}, {"id": 570, "code": "25/10", "name": "ห้องชาร์ปวาล์วน้ำ 25/10", "floor": "25", "seq": 10}, {"id": 571, "code": "25/11", "name": "ห้องชาร์ปวาล์วน้ำ 25/11", "floor": "25", "seq": 11}, {"id": 572, "code": "25/12", "name": "ห้องชาร์ปวาล์วน้ำ 25/12", "floor": "25", "seq": 12}, {"id": 573, "code": "25/13", "name": "ห้องชาร์ปวาล์วน้ำ 25/13", "floor": "25", "seq": 13}, {"id": 574, "code": "25/14", "name": "ห้องชาร์ปวาล์วน้ำ 25/14", "floor": "25", "seq": 14}, {"id": 575, "code": "25/15", "name": "ห้องชาร์ปวาล์วน้ำ 25/15", "floor": "25", "seq": 15}, {"id": 576, "code": "25/16", "name": "ห้องชาร์ปวาล์วน้ำ 25/16", "floor": "25", "seq": 16}, {"id": 577, "code": "25/17", "name": "ห้องชาร์ปวาล์วน้ำ 25/17", "floor": "25", "seq": 17}, {"id": 578, "code": "25/18", "name": "ห้องชาร์ปวาล์วน้ำ 25/18", "floor": "25", "seq": 18}, {"id": 579, "code": "25/19", "name": "ห้องชาร์ปวาล์วน้ำ 25/19", "floor": "25", "seq": 19}, {"id": 580, "code": "25/20", "name": "ห้องชาร์ปวาล์วน้ำ 25/20", "floor": "25", "seq": 20}, {"id": 581, "code": "25/21", "name": "ห้องชาร์ปวาล์วน้ำ 25/21", "floor": "25", "seq": 21}, {"id": 582, "code": "25/22", "name": "ห้องชาร์ปวาล์วน้ำ 25/22", "floor": "25", "seq": 22}, {"id": 583, "code": "25/23", "name": "ห้องชาร์ปวาล์วน้ำ 25/23", "floor": "25", "seq": 23}, {"id": 584, "code": "25/24", "name": "ห้องชาร์ปวาล์วน้ำ 25/24", "floor": "25", "seq": 24}, {"id": 585, "code": "25/25", "name": "ห้องชาร์ปวาล์วน้ำ 25/25", "floor": "25", "seq": 25}, {"id": 586, "code": "25/26", "name": "ห้องชาร์ปวาล์วน้ำ 25/26", "floor": "25", "seq": 26}, {"id": 587, "code": "25/27", "name": "ห้องชาร์ปวาล์วน้ำ 25/27", "floor": "25", "seq": 27}, {"id": 588, "code": "25/28", "name": "ห้องชาร์ปวาล์วน้ำ 25/28", "floor": "25", "seq": 28}, {"id": 589, "code": "25/29", "name": "ห้องชาร์ปวาล์วน้ำ 25/29", "floor": "25", "seq": 29}, {"id": 590, "code": "25/30", "name": "ห้องชาร์ปวาล์วน้ำ 25/30", "floor": "25", "seq": 30}, {"id": 591, "code": "25/31", "name": "ห้องชาร์ปวาล์วน้ำ 25/31", "floor": "25", "seq": 31}, {"id": 592, "code": "25/32", "name": "ห้องชาร์ปวาล์วน้ำ 25/32", "floor": "25", "seq": 32}, {"id": 593, "code": "25/33", "name": "ห้องชาร์ปวาล์วน้ำ 25/33", "floor": "25", "seq": 33}, {"id": 594, "code": "25/34", "name": "ห้องชาร์ปวาล์วน้ำ 25/34", "floor": "25", "seq": 34}, {"id": 595, "code": "25/35", "name": "ห้องชาร์ปวาล์วน้ำ 25/35", "floor": "25", "seq": 35}, {"id": 596, "code": "25/36", "name": "ห้องชาร์ปวาล์วน้ำ 25/36", "floor": "25", "seq": 36}, {"id": 597, "code": "25/37", "name": "ห้องชาร์ปวาล์วน้ำ 25/37", "floor": "25", "seq": 37}, {"id": 598, "code": "25/38", "name": "ห้องชาร์ปวาล์วน้ำ 25/38", "floor": "25", "seq": 38}, {"id": 599, "code": "26/1", "name": "ห้องชาร์ปวาล์วน้ำ 26/1", "floor": "26", "seq": 1}, {"id": 600, "code": "26/2", "name": "ห้องชาร์ปวาล์วน้ำ 26/2", "floor": "26", "seq": 2}, {"id": 601, "code": "26/3", "name": "ห้องชาร์ปวาล์วน้ำ 26/3", "floor": "26", "seq": 3}, {"id": 602, "code": "26/4", "name": "ห้องชาร์ปวาล์วน้ำ 26/4", "floor": "26", "seq": 4}, {"id": 603, "code": "26/5", "name": "ห้องชาร์ปวาล์วน้ำ 26/5", "floor": "26", "seq": 5}, {"id": 604, "code": "26/6", "name": "ห้องชาร์ปวาล์วน้ำ 26/6", "floor": "26", "seq": 6}, {"id": 605, "code": "26/7", "name": "ห้องชาร์ปวาล์วน้ำ 26/7", "floor": "26", "seq": 7}, {"id": 606, "code": "26/8", "name": "ห้องชาร์ปวาล์วน้ำ 26/8", "floor": "26", "seq": 8}, {"id": 607, "code": "26/9", "name": "ห้องชาร์ปวาล์วน้ำ 26/9", "floor": "26", "seq": 9}, {"id": 608, "code": "26/10", "name": "ห้องชาร์ปวาล์วน้ำ 26/10", "floor": "26", "seq": 10}, {"id": 609, "code": "26/11", "name": "ห้องชาร์ปวาล์วน้ำ 26/11", "floor": "26", "seq": 11}, {"id": 610, "code": "26/12", "name": "ห้องชาร์ปวาล์วน้ำ 26/12", "floor": "26", "seq": 12}, {"id": 611, "code": "26/13", "name": "ห้องชาร์ปวาล์วน้ำ 26/13", "floor": "26", "seq": 13}, {"id": 612, "code": "26/14", "name": "ห้องชาร์ปวาล์วน้ำ 26/14", "floor": "26", "seq": 14}, {"id": 613, "code": "26/15", "name": "ห้องชาร์ปวาล์วน้ำ 26/15", "floor": "26", "seq": 15}, {"id": 614, "code": "26/16", "name": "ห้องชาร์ปวาล์วน้ำ 26/16", "floor": "26", "seq": 16}, {"id": 615, "code": "26/17", "name": "ห้องชาร์ปวาล์วน้ำ 26/17", "floor": "26", "seq": 17}, {"id": 616, "code": "26/18", "name": "ห้องชาร์ปวาล์วน้ำ 26/18", "floor": "26", "seq": 18}, {"id": 617, "code": "26/19", "name": "ห้องชาร์ปวาล์วน้ำ 26/19", "floor": "26", "seq": 19}, {"id": 618, "code": "26/20", "name": "ห้องชาร์ปวาล์วน้ำ 26/20", "floor": "26", "seq": 20}, {"id": 619, "code": "26/21", "name": "ห้องชาร์ปวาล์วน้ำ 26/21", "floor": "26", "seq": 21}, {"id": 620, "code": "26/22", "name": "ห้องชาร์ปวาล์วน้ำ 26/22", "floor": "26", "seq": 22}, {"id": 621, "code": "26/23", "name": "ห้องชาร์ปวาล์วน้ำ 26/23", "floor": "26", "seq": 23}, {"id": 622, "code": "26/24", "name": "ห้องชาร์ปวาล์วน้ำ 26/24", "floor": "26", "seq": 24}, {"id": 623, "code": "26/25", "name": "ห้องชาร์ปวาล์วน้ำ 26/25", "floor": "26", "seq": 25}, {"id": 624, "code": "26/26", "name": "ห้องชาร์ปวาล์วน้ำ 26/26", "floor": "26", "seq": 26}, {"id": 625, "code": "26/27", "name": "ห้องชาร์ปวาล์วน้ำ 26/27", "floor": "26", "seq": 27}, {"id": 626, "code": "26/28", "name": "ห้องชาร์ปวาล์วน้ำ 26/28", "floor": "26", "seq": 28}, {"id": 627, "code": "26/29", "name": "ห้องชาร์ปวาล์วน้ำ 26/29", "floor": "26", "seq": 29}, {"id": 628, "code": "26/30", "name": "ห้องชาร์ปวาล์วน้ำ 26/30", "floor": "26", "seq": 30}, {"id": 629, "code": "26/31", "name": "ห้องชาร์ปวาล์วน้ำ 26/31", "floor": "26", "seq": 31}, {"id": 630, "code": "26/32", "name": "ห้องชาร์ปวาล์วน้ำ 26/32", "floor": "26", "seq": 32}, {"id": 631, "code": "26/33", "name": "ห้องชาร์ปวาล์วน้ำ 26/33", "floor": "26", "seq": 33}, {"id": 632, "code": "26/34", "name": "ห้องชาร์ปวาล์วน้ำ 26/34", "floor": "26", "seq": 34}, {"id": 633, "code": "26/35", "name": "ห้องชาร์ปวาล์วน้ำ 26/35", "floor": "26", "seq": 35}, {"id": 634, "code": "26/36", "name": "ห้องชาร์ปวาล์วน้ำ 26/36", "floor": "26", "seq": 36}, {"id": 635, "code": "26/37", "name": "ห้องชาร์ปวาล์วน้ำ 26/37", "floor": "26", "seq": 37}, {"id": 636, "code": "26/38", "name": "ห้องชาร์ปวาล์วน้ำ 26/38", "floor": "26", "seq": 38}, {"id": 637, "code": "26/39", "name": "ห้องชาร์ปวาล์วน้ำ 26/39", "floor": "26", "seq": 39}, {"id": 638, "code": "27/1", "name": "ห้องชาร์ปวาล์วน้ำ 27/1", "floor": "27", "seq": 1}, {"id": 639, "code": "27/2", "name": "ห้องชาร์ปวาล์วน้ำ 27/2", "floor": "27", "seq": 2}, {"id": 640, "code": "27/3", "name": "ห้องชาร์ปวาล์วน้ำ 27/3", "floor": "27", "seq": 3}, {"id": 641, "code": "27/4", "name": "ห้องชาร์ปวาล์วน้ำ 27/4", "floor": "27", "seq": 4}, {"id": 642, "code": "27/5", "name": "ห้องชาร์ปวาล์วน้ำ 27/5", "floor": "27", "seq": 5}, {"id": 643, "code": "27/6", "name": "ห้องชาร์ปวาล์วน้ำ 27/6", "floor": "27", "seq": 6}, {"id": 644, "code": "27/7", "name": "ห้องชาร์ปวาล์วน้ำ 27/7", "floor": "27", "seq": 7}, {"id": 645, "code": "27/8", "name": "ห้องชาร์ปวาล์วน้ำ 27/8", "floor": "27", "seq": 8}, {"id": 646, "code": "27/9", "name": "ห้องชาร์ปวาล์วน้ำ 27/9", "floor": "27", "seq": 9}, {"id": 647, "code": "27/10", "name": "ห้องชาร์ปวาล์วน้ำ 27/10", "floor": "27", "seq": 10}, {"id": 648, "code": "27/11", "name": "ห้องชาร์ปวาล์วน้ำ 27/11", "floor": "27", "seq": 11}, {"id": 649, "code": "27/12", "name": "ห้องชาร์ปวาล์วน้ำ 27/12", "floor": "27", "seq": 12}, {"id": 650, "code": "27/13", "name": "ห้องชาร์ปวาล์วน้ำ 27/13", "floor": "27", "seq": 13}, {"id": 651, "code": "27/14", "name": "ห้องชาร์ปวาล์วน้ำ 27/14", "floor": "27", "seq": 14}, {"id": 652, "code": "27/15", "name": "ห้องชาร์ปวาล์วน้ำ 27/15", "floor": "27", "seq": 15}, {"id": 653, "code": "27/16", "name": "ห้องชาร์ปวาล์วน้ำ 27/16", "floor": "27", "seq": 16}, {"id": 654, "code": "27/17", "name": "ห้องชาร์ปวาล์วน้ำ 27/17", "floor": "27", "seq": 17}, {"id": 655, "code": "27/18", "name": "ห้องชาร์ปวาล์วน้ำ 27/18", "floor": "27", "seq": 18}, {"id": 656, "code": "27/19", "name": "ห้องชาร์ปวาล์วน้ำ 27/19", "floor": "27", "seq": 19}, {"id": 657, "code": "27/20", "name": "ห้องชาร์ปวาล์วน้ำ 27/20", "floor": "27", "seq": 20}, {"id": 658, "code": "27/21", "name": "ห้องชาร์ปวาล์วน้ำ 27/21", "floor": "27", "seq": 21}, {"id": 659, "code": "27/22", "name": "ห้องชาร์ปวาล์วน้ำ 27/22", "floor": "27", "seq": 22}, {"id": 660, "code": "27/23", "name": "ห้องชาร์ปวาล์วน้ำ 27/23", "floor": "27", "seq": 23}, {"id": 661, "code": "27/24", "name": "ห้องชาร์ปวาล์วน้ำ 27/24", "floor": "27", "seq": 24}, {"id": 662, "code": "27/25", "name": "ห้องชาร์ปวาล์วน้ำ 27/25", "floor": "27", "seq": 25}, {"id": 663, "code": "27/26", "name": "ห้องชาร์ปวาล์วน้ำ 27/26", "floor": "27", "seq": 26}, {"id": 664, "code": "27/27", "name": "ห้องชาร์ปวาล์วน้ำ 27/27", "floor": "27", "seq": 27}, {"id": 665, "code": "27/28", "name": "ห้องชาร์ปวาล์วน้ำ 27/28", "floor": "27", "seq": 28}, {"id": 666, "code": "27/29", "name": "ห้องชาร์ปวาล์วน้ำ 27/29", "floor": "27", "seq": 29}, {"id": 667, "code": "27/30", "name": "ห้องชาร์ปวาล์วน้ำ 27/30", "floor": "27", "seq": 30}, {"id": 668, "code": "27/31", "name": "ห้องชาร์ปวาล์วน้ำ 27/31", "floor": "27", "seq": 31}, {"id": 669, "code": "27/32", "name": "ห้องชาร์ปวาล์วน้ำ 27/32", "floor": "27", "seq": 32}, {"id": 670, "code": "27/33", "name": "ห้องชาร์ปวาล์วน้ำ 27/33", "floor": "27", "seq": 33}, {"id": 671, "code": "27/34", "name": "ห้องชาร์ปวาล์วน้ำ 27/34", "floor": "27", "seq": 34}, {"id": 672, "code": "27/35", "name": "ห้องชาร์ปวาล์วน้ำ 27/35", "floor": "27", "seq": 35}, {"id": 673, "code": "27/36", "name": "ห้องชาร์ปวาล์วน้ำ 27/36", "floor": "27", "seq": 36}, {"id": 674, "code": "27/37", "name": "ห้องชาร์ปวาล์วน้ำ 27/37", "floor": "27", "seq": 37}, {"id": 675, "code": "28/1", "name": "ห้องชาร์ปวาล์วน้ำ 28/1", "floor": "28", "seq": 1}, {"id": 676, "code": "28/2", "name": "ห้องชาร์ปวาล์วน้ำ 28/2", "floor": "28", "seq": 2}, {"id": 677, "code": "28/3", "name": "ห้องชาร์ปวาล์วน้ำ 28/3", "floor": "28", "seq": 3}, {"id": 678, "code": "28/4", "name": "ห้องชาร์ปวาล์วน้ำ 28/4", "floor": "28", "seq": 4}, {"id": 679, "code": "28/5", "name": "ห้องชาร์ปวาล์วน้ำ 28/5", "floor": "28", "seq": 5}, {"id": 680, "code": "28/6", "name": "ห้องชาร์ปวาล์วน้ำ 28/6", "floor": "28", "seq": 6}, {"id": 681, "code": "28/7", "name": "ห้องชาร์ปวาล์วน้ำ 28/7", "floor": "28", "seq": 7}, {"id": 682, "code": "28/8", "name": "ห้องชาร์ปวาล์วน้ำ 28/8", "floor": "28", "seq": 8}, {"id": 683, "code": "28/9", "name": "ห้องชาร์ปวาล์วน้ำ 28/9", "floor": "28", "seq": 9}, {"id": 684, "code": "28/10", "name": "ห้องชาร์ปวาล์วน้ำ 28/10", "floor": "28", "seq": 10}, {"id": 685, "code": "28/11", "name": "ห้องชาร์ปวาล์วน้ำ 28/11", "floor": "28", "seq": 11}, {"id": 686, "code": "28/12", "name": "ห้องชาร์ปวาล์วน้ำ 28/12", "floor": "28", "seq": 12}, {"id": 687, "code": "28/13", "name": "ห้องชาร์ปวาล์วน้ำ 28/13", "floor": "28", "seq": 13}, {"id": 688, "code": "28/14", "name": "ห้องชาร์ปวาล์วน้ำ 28/14", "floor": "28", "seq": 14}, {"id": 689, "code": "28/15", "name": "ห้องชาร์ปวาล์วน้ำ 28/15", "floor": "28", "seq": 15}, {"id": 690, "code": "28/16", "name": "ห้องชาร์ปวาล์วน้ำ 28/16", "floor": "28", "seq": 16}, {"id": 691, "code": "28/17", "name": "ห้องชาร์ปวาล์วน้ำ 28/17", "floor": "28", "seq": 17}, {"id": 692, "code": "28/18", "name": "ห้องชาร์ปวาล์วน้ำ 28/18", "floor": "28", "seq": 18}, {"id": 693, "code": "28/19", "name": "ห้องชาร์ปวาล์วน้ำ 28/19", "floor": "28", "seq": 19}, {"id": 694, "code": "28/20", "name": "ห้องชาร์ปวาล์วน้ำ 28/20", "floor": "28", "seq": 20}, {"id": 695, "code": "28/21", "name": "ห้องชาร์ปวาล์วน้ำ 28/21", "floor": "28", "seq": 21}, {"id": 696, "code": "28/22", "name": "ห้องชาร์ปวาล์วน้ำ 28/22", "floor": "28", "seq": 22}, {"id": 697, "code": "28/23", "name": "ห้องชาร์ปวาล์วน้ำ 28/23", "floor": "28", "seq": 23}, {"id": 698, "code": "28/24", "name": "ห้องชาร์ปวาล์วน้ำ 28/24", "floor": "28", "seq": 24}, {"id": 699, "code": "28/25", "name": "ห้องชาร์ปวาล์วน้ำ 28/25", "floor": "28", "seq": 25}, {"id": 700, "code": "28/26", "name": "ห้องชาร์ปวาล์วน้ำ 28/26", "floor": "28", "seq": 26}, {"id": 701, "code": "28/27", "name": "ห้องชาร์ปวาล์วน้ำ 28/27", "floor": "28", "seq": 27}, {"id": 702, "code": "28/28", "name": "ห้องชาร์ปวาล์วน้ำ 28/28", "floor": "28", "seq": 28}, {"id": 703, "code": "28/29", "name": "ห้องชาร์ปวาล์วน้ำ 28/29", "floor": "28", "seq": 29}, {"id": 704, "code": "28/30", "name": "ห้องชาร์ปวาล์วน้ำ 28/30", "floor": "28", "seq": 30}, {"id": 705, "code": "28/31", "name": "ห้องชาร์ปวาล์วน้ำ 28/31", "floor": "28", "seq": 31}, {"id": 706, "code": "28/32", "name": "ห้องชาร์ปวาล์วน้ำ 28/32", "floor": "28", "seq": 32}, {"id": 707, "code": "28/33", "name": "ห้องชาร์ปวาล์วน้ำ 28/33", "floor": "28", "seq": 33}, {"id": 708, "code": "28/34", "name": "ห้องชาร์ปวาล์วน้ำ 28/34", "floor": "28", "seq": 34}];
+
+let currentRecords = [];
+let lastCheckMap = {};
+let lastCheckLoaded = false;
+let overdueExpanded = false;
+
+function todayStr(){
+  const d = new Date();
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d - tz).toISOString().slice(0,10);
+}
+function getWeekMonday(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  const diffToMonday = (day === 0) ? 6 : (day - 1);
+  d.setDate(d.getDate() - diffToMonday);
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d - tz).toISOString().slice(0,10);
+}
+function driveThumb(url, size){
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!m) return url;
+  return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w" + (size||500);
+}
+
+async function loadLastCheck(){
+  if (!CONFIG.GAS_URL){ lastCheckMap = {}; lastCheckLoaded = true; renderOverdue(); return; }
+  try{
+    const url = CONFIG.GAS_URL + "?action=lastcheck";
+    const resp = await fetch(url);
+    lastCheckMap = await resp.json();
+  }catch(e){
+    console.error("โหลดข้อมูลวันตรวจล่าสุดไม่สำเร็จ", e);
+    lastCheckMap = null;
+  }
+  lastCheckLoaded = true;
+  renderOverdue();
+}
+
+function renderOverdue(){
+  if (!lastCheckLoaded) return;
+  const box = document.getElementById("overdueBox");
+  const title = document.getElementById("overdueTitle");
+  const toggle = document.getElementById("overdueToggle");
+  const listEl = document.getElementById("overdueList");
+
+  if (lastCheckMap === null){
+    box.className = "overdue-box";
+    title.textContent = "⚠️ ตรวจสอบจุดเกินกำหนดไม่สำเร็จ (โหลดข้อมูลไม่ได้)";
+    toggle.textContent = ""; listEl.classList.remove("show"); listEl.innerHTML = "";
+    return;
+  }
+  const floor = document.getElementById("floorFilter").value;
+  const q = document.getElementById("searchBox").value.trim().toLowerCase();
+  let roomsInScope = ROOMS.slice();
+  if (floor) roomsInScope = roomsInScope.filter(r=>r.floor===floor);
+  if (q) roomsInScope = roomsInScope.filter(r=>(r.code+" "+r.name).toLowerCase().includes(q));
+
+  const today = todayStr();
+  const monday = getWeekMonday(today);
+  const overdue = [];
+  roomsInScope.forEach(room=>{
+    const lastDate = lastCheckMap[room.id];
+    if (!lastDate || lastDate < monday){ overdue.push({ room, lastDate }); }
+  });
+  overdue.sort((a,b)=>{
+    if (!a.lastDate && !b.lastDate) return 0;
+    if (!a.lastDate) return -1;
+    if (!b.lastDate) return 1;
+    return a.lastDate < b.lastDate ? -1 : 1;
+  });
+
+  if (!overdue.length){
+    box.className = "overdue-box none";
+    title.textContent = "✅ ตรวจครบทุกจุดในสัปดาห์นี้แล้ว (จ.–อา.) ในขอบเขตนี้";
+    toggle.textContent = ""; listEl.classList.remove("show"); listEl.innerHTML = "";
+    return;
+  }
+  box.className = "overdue-box";
+  title.innerHTML = `⚠️ จุดที่ยังไม่ได้ตรวจในสัปดาห์นี้ (จ.–อา.) <span class="count">${overdue.length}</span>`;
+  toggle.textContent = overdueExpanded ? "ซ่อนรายการ ▲" : "ดูรายการ ▼";
+  listEl.classList.toggle("show", overdueExpanded);
+  listEl.innerHTML = overdue.map(({room, lastDate})=>`
+    <div class="overdue-item">
+      <div><div class="rname">${room.name}</div><div class="rmeta">ชั้น ${room.floor} · รหัส ${room.code}</div></div>
+      <span class="days ${lastDate ? '' : 'never'}">${lastDate ? ("ตรวจล่าสุด " + lastDate) : "ไม่เคยตรวจเลย"}</span>
+    </div>
+  `).join("");
+}
+function toggleOverdueList(){ overdueExpanded = !overdueExpanded; renderOverdue(); }
+
+function populateFilters(){
+  const floors = [...new Set(ROOMS.map(r=>r.floor))];
+  const floorSel = document.getElementById("floorFilter");
+  floors.forEach(f=>{
+    const o = document.createElement("option");
+    o.value = f; o.textContent = "ชั้น " + f;
+    floorSel.appendChild(o);
+  });
+}
+
+function setToday(){ document.getElementById("dateInput").value = todayStr(); loadData(); }
+
+async function loadData(){
+  const date = document.getElementById("dateInput").value;
+  document.getElementById("todayBtn").classList.toggle("active", date === todayStr());
+
+  if (!CONFIG.GAS_URL){
+    document.getElementById("stats").innerHTML = `
+      <div class="stat" style="grid-column:1/-1;">
+        <div class="num" style="font-size:16px;color:var(--amber);">⚠️ ยังไม่ได้ตั้งค่า GAS_URL</div>
+        <div class="lbl">ใส่ URL ของ Google Apps Script ใน CONFIG.GAS_URL ก่อนใช้งานจริง</div>
+      </div>`;
+    currentRecords = [];
+    render();
+    return;
+  }
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat" style="grid-column:1/-1;">
+      <div class="num" style="font-size:16px;color:var(--muted);">⏳ กำลังโหลดข้อมูล...</div>
+      <div class="lbl">ถ้า Apps Script แออุด อาจใช้เวลาถึง 15 วินาที</div>
+    </div>`;
+
+  const TIMEOUT_MS = 15000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), TIMEOUT_MS);
+  try{
+    const url = CONFIG.GAS_URL + "?action=records&date=" + encodeURIComponent(date);
+    const resp = await fetch(url, { signal: controller.signal });
+    currentRecords = await resp.json();
+    clearTimeout(timeoutId);
+  }catch(e){
+    clearTimeout(timeoutId);
+    currentRecords = null;
+    console.error("โหลดข้อมูลไม่สำเร็จ", e);
+    document.getElementById("stats").innerHTML = `
+      <div class="stat" style="grid-column:1/-1;">
+        <div class="num" style="font-size:16px;color:var(--red);">⚠️ โหลดข้อมูลไม่สำเร็จ</div>
+        <div class="lbl">Apps Script อาจกำลังแออัดหรือช้าผิดปกติ ลองใหม่อีกครั้ง</div>
+        <button class="todaybtn" style="margin-top:10px;" onclick="loadData()">🔄 ลองใหม่</button>
+      </div>`;
+    return;
+  }
+  render();
+}
+
+function render(){
+  renderOverdue();
+  const floor = document.getElementById("floorFilter").value;
+  const q = document.getElementById("searchBox").value.trim().toLowerCase();
+
+  let roomsInScope = ROOMS.slice();
+  if (floor) roomsInScope = roomsInScope.filter(r=>r.floor===floor);
+  if (q) roomsInScope = roomsInScope.filter(r=>(r.code+" "+r.name).toLowerCase().includes(q));
+
+  const byRoom = {};
+  (currentRecords||[]).forEach(rec=>{ byRoom[rec.roomId] = rec; });
+
+  const inspectedIds = new Set();
+  const inspectedList = [];
+  roomsInScope.forEach(room=>{
+    const rec = byRoom[room.id];
+    if (rec){ inspectedIds.add(room.id); inspectedList.push({room, rec}); }
+  });
+  const pendingList = roomsInScope.filter(r=>!inspectedIds.has(r.id));
+
+  function recHasIssue(rec){
+    if (Array.isArray(rec.checklist)) return rec.checklist.some(c=>c.status==="bad");
+    return rec.overall === "พบปัญหา";
+  }
+  const issueCount = inspectedList.filter(x=>recHasIssue(x.rec)).length;
+  const passCount = inspectedList.length - issueCount;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="num">${roomsInScope.length}</div><div class="lbl">จุดทั้งหมด (ตามตัวกรอง)</div></div>
+    <div class="stat ok"><div class="num">${passCount}</div><div class="lbl">ผ่าน</div></div>
+    <div class="stat bad"><div class="num">${issueCount}</div><div class="lbl">พบปัญหา</div></div>
+    <div class="stat pending"><div class="num">${pendingList.length}</div><div class="lbl">ยังไม่ได้ตรวจ</div></div>
+  `;
+  document.getElementById("cInspected").textContent = inspectedList.length;
+  document.getElementById("cPending").textContent = pendingList.length;
+
+  const listInspected = document.getElementById("listInspected");
+  if (!inspectedList.length){
+    listInspected.innerHTML = `<div class="empty">ยังไม่มีจุดที่ตรวจในวันที่เลือก (ตามตัวกรองนี้)</div>`;
+  } else {
+    listInspected.innerHTML = inspectedList.map(({room,rec})=>`
+      <div class="card" onclick='openModal(${JSON.stringify(rec).replace(/'/g,"&apos;")})'>
+        <div class="left">
+          <div class="rname">${room.name}</div>
+          <div class="rmeta">ชั้น ${room.floor} · รหัส ${room.code} · ผู้ตรวจ: ${rec.inspector || "-"} · ${rec.submittedAt || ""}</div>
+        </div>
+        <span class="badge ${recHasIssue(rec)?'issue':'pass'}">${recHasIssue(rec)?'พบปัญหา':'ผ่าน'}</span>
+      </div>
+    `).join("");
+  }
+
+  const listPending = document.getElementById("listPending");
+  if (!pendingList.length){
+    listPending.innerHTML = `<div class="empty">ตรวจครบทุกจุดแล้ว 🎉</div>`;
+  } else {
+    listPending.innerHTML = pendingList.map(room=>`
+      <div class="card" style="cursor:default;">
+        <div class="left"><div class="rname">${room.name}</div><div class="rmeta">ชั้น ${room.floor} · รหัส ${room.code}</div></div>
+        <span class="badge pending">ยังไม่ตรวจ</span>
+      </div>
+    `).join("");
+  }
+}
+
+function openModal(rec){
+  const modal = document.getElementById("modal");
+  const rows = [
+    ["ผู้ตรวจ", rec.inspector || "-"],
+    ["วันที่ตรวจ", rec.inspDate || "-"],
+    ["เวลาบันทึก", rec.submittedAt || "-"],
+  ];
+  if (Array.isArray(rec.checklist)){
+    rec.checklist.forEach(item => {
+      rows.push([item.title, item.status==="ok" ? "ปกติ" : ("ผิดปกติ — " + (item.reason||""))]);
+    });
+  }
+  let photosHtml = "";
+  if (rec.photoLinks && rec.photoLinks.length){
+    photosHtml = `<div class="photos">` + rec.photoLinks.map(u=>
+      `<img src="${driveThumb(u,300)}" onclick="event.stopPropagation();openLightbox('${driveThumb(u,1600)}')">`
+    ).join("") + `</div>`;
+  } else if (rec.photoNote){
+    photosHtml = `<div class="note">${rec.photoNote}</div>`;
+  }
+  modal.innerHTML = `
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h3>${rec.roomName}</h3>
+    <div class="mmeta">ชั้น ${rec.floor} · รหัส ${rec.roomCode||""}</div>
+    ${rows.map(([k,v])=>`<div class="row"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")}
+    ${rec.note ? `<div class="note">หมายเหตุ: ${rec.note}</div>` : ""}
+    ${photosHtml}
+  `;
+  document.getElementById("modalBg").classList.add("show");
+}
+function closeModal(){ document.getElementById("modalBg").classList.remove("show"); }
+function openLightbox(src){ document.getElementById("lightboxImg").src = src; document.getElementById("lightbox").classList.add("show"); }
+
+function init(){
+  populateFilters();
+  document.getElementById("dateInput").value = todayStr();
+  ["floorFilter","searchBox"].forEach(id=>{
+    document.getElementById(id).addEventListener("input", render);
+    document.getElementById(id).addEventListener("change", render);
+  });
+  document.getElementById("dateInput").addEventListener("change", loadData);
+  loadData();
+  loadLastCheck();
+}
+if (sessionStorage.getItem("valve_dash_auth") === "1"){ init(); }
+</script>
+</body>
+</html>
