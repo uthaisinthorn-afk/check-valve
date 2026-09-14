@@ -63,10 +63,11 @@
   .toggle-btn.ok.active{border-color:var(--teal);background:var(--teal-light);color:var(--teal);}
   .toggle-btn.bad.active{border-color:var(--red);background:var(--red-light);color:var(--red);}
 
-  .reason-box{margin-top:10px;display:none;}
-  .reason-box.show{display:block;}
-  .reason-box textarea{width:100%;border:1px solid var(--red);background:var(--red-light);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;resize:vertical;min-height:56px;}
-  .reason-box .hint{font-size:11.5px;color:var(--red);margin-top:4px;}
+  .reason-box{margin-top:10px;}
+  .reason-box textarea{width:100%;border:1px solid var(--line);background:#fcfbf8;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;resize:vertical;min-height:56px;}
+  .reason-box.required textarea{border-color:var(--red);background:var(--red-light);}
+  .reason-box .hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .reason-box.required .hint{color:var(--red);font-weight:600;}
 
   textarea.note{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:inherit;font-size:14px;min-height:70px;resize:vertical;}
 
@@ -168,10 +169,14 @@ const CONFIG = {
   MAP_IMG_PATH: "maps/"
 };
 
-// ---------- รายการตรวจเช็ก (TODO: รอโค้ชส่งหัวข้อจริงมาแทนที่ชุดนี้) ----------
+// ---------- รายการตรวจเช็ก ----------
 const CHECKLIST = [
-  { key: "general", title: "สภาพโดยรวมของห้อง/จุดวาล์ว", okLabel: "ปกติ", badLabel: "ผิดปกติ",
-    placeholder: "ระบุลักษณะความผิดปกติที่พบ..." }
+  { key: "lock", title: "การล็อกห้อง/จุดวาล์ว", okLabel: "ล็อก", badLabel: "ไม่ล็อก",
+    placeholder: "ระบุเหตุผล เช่น กุญแจหาย, กลอนชำรุด..." },
+  { key: "clean", title: "ความสะอาด", okLabel: "สะอาด", badLabel: "สกปรก",
+    placeholder: "ระบุลักษณะความสกปรกที่พบ..." },
+  { key: "leak", title: "น้ำหยด/รั่วซึม", okLabel: "ไม่มีน้ำหยด", badLabel: "มีน้ำหยด",
+    placeholder: "ระบุตำแหน่งและลักษณะน้ำหยด/รั่วซึมที่พบ..." }
 ];
 
 // ---------- state ----------
@@ -350,7 +355,13 @@ function render_active_states(){
     if(!okBtn) return;
     okBtn.classList.toggle("active", checks[key]==="ok");
     badBtn.classList.toggle("active", checks[key]==="bad");
-    reasonBox.classList.toggle("show", checks[key]==="bad");
+    reasonBox.classList.toggle("required", checks[key]==="bad");
+    const hintEl = reasonBox.querySelector(".hint");
+    if (hintEl){
+      hintEl.textContent = checks[key]==="bad"
+        ? "กรุณาระบุเหตุผลและถ่ายรูปประกอบด้านล่าง"
+        : "หมายเหตุ (ถ้ามี)";
+    }
   });
 }
 
@@ -371,7 +382,7 @@ function renderForm(){
       </div>
       <div class="reason-box" id="${item.key}_reasonbox">
         <textarea id="${item.key}_reason" placeholder="${item.placeholder}"></textarea>
-        <div class="hint">กรุณาระบุเหตุผลและถ่ายรูปประกอบด้านล่าง</div>
+        <div class="hint">หมายเหตุ (ถ้ามี)</div>
       </div>
     </div>
   `).join("");
