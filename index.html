@@ -115,13 +115,16 @@
   a.dash-link{color:#fff;opacity:.7;font-size:12px;}
 
   /* ---------- Map mode ---------- */
-  .floor-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;}
-  .floor-chip{padding:10px 4px;text-align:center;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;}
-  .floor-chip.active{background:var(--navy);color:#fff;border-color:var(--navy);}
-  .map-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:14px;}
-  .map-box img{width:100%;border-radius:8px;display:block;}
-  .map-missing{padding:40px 16px;text-align:center;color:var(--muted);font-size:13px;}
-  .map-count{font-size:13px;color:var(--navy);font-weight:700;margin-bottom:8px;text-align:center;}
+ .map-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:14px;}
+.zoom-wrap{width:100%;height:65vh;overflow:hidden;position:relative;background:#f2f0ea;border-radius:8px;touch-action:none;cursor:grab;}
+.zoom-wrap.grabbing{cursor:grabbing;}
+.zoom-wrap img{max-width:none;width:100%;display:block;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+.zoom-controls{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:10px;}
+.zoom-btn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:20px;font-weight:700;color:var(--navy);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.zoom-reset-btn{border-radius:20px;width:auto;padding:0 16px;font-size:13px;}
+.zoom-hint{font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px;}
+.map-missing{padding:40px 16px;text-align:center;color:var(--muted);font-size:13px;}
+.map-count{font-size:13px;color:var(--navy);font-weight:700;margin-bottom:8px;text-align:center;}
 </style>
 </head>
 <body>
@@ -236,8 +239,107 @@ function renderMap(){
     });
     document.getElementById("mapCount").textContent = `ชั้น ${f} — มีห้องชาร์ปวาล์วน้ำทั้งหมด ${countByFloor[f]||0} จุด`;
    const imgPath = CONFIG.MAP_IMG_PATH + (FLOOR_IMG_OVERRIDE[f] || ("floor" + f + "_annotated.png"));
-    document.getElementById("mapBox").innerHTML = `<img src="${imgPath}" onerror="this.parentElement.innerHTML='<div class=\'map-missing\'>ยังไม่มีภาพผังของชั้นนี้<br>(วางไฟล์ ${imgPath} ไว้บนเซิร์ฟเวอร์)</div>'">`;
+  document.getElementById("mapBox").innerHTML = `
+  <div class="zoom-wrap" id="zoomWrap">
+    <img id="mapImg" src="${imgPath}" onerror="this.closest('.map-box').querySelector('.zoom-wrap').outerHTML='<div class=\'map-missing\'>ยังไม่มีภาพผังของชั้นนี้<br>(วางไฟล์ ${imgPath} ไว้บนเซิร์ฟเวอร์)</div>'">
+  </div>
+  <div class="zoom-controls">
+    <button type="button" class="zoom-btn" id="zoomOutBtn">−</button>
+    <button type="button" class="zoom-btn zoom-reset-btn" id="zoomResetBtn">รีเซ็ต</button>
+    <button type="button" class="zoom-btn" id="zoomInBtn">+</button>
+  </div>
+  <div class="zoom-hint">ใช้ 2 นิ้วบีบ/ขยายเพื่อซูม หรือแตะ 2 ครั้งเพื่อซูมเข้า-ออก</div>
+`;
+setupMapZoom();
+}
+  // ---------- ซูม/ลากดูแผนที่ ----------
+function setupMapZoom(){
+  const wrap = document.getElementById("zoomWrap");
+  const img = document.getElementById("mapImg");
+  if (!wrap || !img) return;
+
+  let scale = 1, minScale = 1, maxScale = 5;
+  let posX = 0, posY = 0;
+  let startDist = 0, startScale = 1;
+  let isPanning = false, startX = 0, startY = 0, startPosX = 0, startPosY = 0;
+  let lastTapTime = 0;
+
+  function apply(){ img.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+
+  function clampPos(){
+    const rect = wrap.getBoundingClientRect();
+    const w = img.offsetWidth * scale, h = img.offsetHeight * scale;
+    const maxX = Math.max(0, (w - rect.width) / 2);
+    const maxY = Math.max(0, (h - rect.height) / 2);
+    posX = Math.min(maxX, Math.max(-maxX, posX));
+    posY = Math.min(maxY, Math.max(-maxY, posY));
   }
+
+  function setScale(next){
+    next = Math.min(maxScale, Math.max(minScale, next));
+    if (next === minScale){ posX = 0; posY = 0; }
+    scale = next;
+    clampPos();
+    apply();
+  }
+
+  img.addEventListener("load", ()=> setScale(1));
+
+  document.getElementById("zoomInBtn").addEventListener("click", ()=> setScale(scale + 0.6));
+  document.getElementById("zoomOutBtn").addEventListener("click", ()=> setScale(scale - 0.6));
+  document.getElementById("zoomResetBtn").addEventListener("click", ()=> setScale(1));
+
+  wrap.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    setScale(scale + (e.deltaY < 0 ? 0.3 : -0.3));
+  }, { passive:false });
+
+  wrap.addEventListener("dblclick", ()=> setScale(scale > 1 ? 1 : 2.5));
+
+  wrap.addEventListener("touchstart", (e)=>{
+    if (e.touches.length === 2){
+      startDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      startScale = scale;
+    } else if (e.touches.length === 1){
+      const now = Date.now();
+      if (now - lastTapTime < 300) setScale(scale > 1 ? 1 : 2.5);
+      lastTapTime = now;
+      isPanning = true;
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      startPosX = posX; startPosY = posY;
+    }
+  }, { passive:true });
+
+  wrap.addEventListener("touchmove", (e)=>{
+    if (e.touches.length === 2){
+      e.preventDefault();
+      const dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      setScale(startScale * (dist / startDist));
+    } else if (e.touches.length === 1 && isPanning && scale > 1){
+      e.preventDefault();
+      posX = startPosX + (e.touches[0].clientX - startX);
+      posY = startPosY + (e.touches[0].clientY - startY);
+      clampPos(); apply();
+    }
+  }, { passive:false });
+
+  wrap.addEventListener("touchend", ()=>{ isPanning = false; });
+
+  wrap.addEventListener("mousedown", (e)=>{
+    if (scale <= 1) return;
+    isPanning = true; wrap.classList.add("grabbing");
+    startX = e.clientX; startY = e.clientY; startPosX = posX; startPosY = posY;
+  });
+  window.addEventListener("mousemove", (e)=>{
+    if (!isPanning) return;
+    posX = startPosX + (e.clientX - startX);
+    posY = startPosY + (e.clientY - startY);
+    clampPos(); apply();
+  });
+  window.addEventListener("mouseup", ()=>{ isPanning = false; wrap.classList.remove("grabbing"); });
+
+  apply();
+}
   document.querySelectorAll(".floor-chip").forEach(el=>{
     el.addEventListener("click", ()=> showFloor(el.getAttribute("data-floor")));
   });
