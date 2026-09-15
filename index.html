@@ -166,7 +166,7 @@ const CONFIG = {
   GAS_URL: "",
   DASHBOARD_PATH: "valve-dashboard.html",
   // path โฟลเดอร์เก็บภาพผังพื้น สำหรับโหมดแผนที่ — ชื่อไฟล์ต้องเป็น floor-<ชั้น>.png เช่น floor-15.png, floor-M.png
-  MAP_IMG_PATH: "maps/"
+  MAP_IMG_PATH: "floor/"
 };
 
 // ---------- รายการตรวจเช็ก ----------
@@ -235,7 +235,7 @@ function renderMap(){
       el.classList.toggle("active", el.getAttribute("data-floor")===f);
     });
     document.getElementById("mapCount").textContent = `ชั้น ${f} — มีห้องชาร์ปวาล์วน้ำทั้งหมด ${countByFloor[f]||0} จุด`;
-    const imgPath = CONFIG.MAP_IMG_PATH + "floor-" + f + ".png";
+    const imgPath = CONFIG.MAP_IMG_PATH + "floor" + f + "_annotated.png";
     document.getElementById("mapBox").innerHTML = `<img src="${imgPath}" onerror="this.parentElement.innerHTML='<div class=\'map-missing\'>ยังไม่มีภาพผังของชั้นนี้<br>(วางไฟล์ ${imgPath} ไว้บนเซิร์ฟเวอร์)</div>'">`;
   }
   document.querySelectorAll(".floor-chip").forEach(el=>{
