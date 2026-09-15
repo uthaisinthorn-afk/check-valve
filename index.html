@@ -235,7 +235,7 @@ function renderMap(){
       el.classList.toggle("active", el.getAttribute("data-floor")===f);
     });
     document.getElementById("mapCount").textContent = `ชั้น ${f} — มีห้องชาร์ปวาล์วน้ำทั้งหมด ${countByFloor[f]||0} จุด`;
-    const imgPath = CONFIG.MAP_IMG_PATH + "floor" + f + "_annotated.png";
+   const imgPath = CONFIG.MAP_IMG_PATH + (FLOOR_IMG_OVERRIDE[f] || ("floor" + f + "_annotated.png"));
     document.getElementById("mapBox").innerHTML = `<img src="${imgPath}" onerror="this.parentElement.innerHTML='<div class=\'map-missing\'>ยังไม่มีภาพผังของชั้นนี้<br>(วางไฟล์ ${imgPath} ไว้บนเซิร์ฟเวอร์)</div>'">`;
   }
   document.querySelectorAll(".floor-chip").forEach(el=>{
