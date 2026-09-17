@@ -213,7 +213,7 @@ const FLOOR_IMG_OVERRIDE = {
   "8": "floor8_annotated.png",
   "9": "floor9_annotated.png",
   "10": "floor10_annotated.png",
-  "11": "floo11_annotated.png",
+  "11": "floor11_annotated.png",
   "12": "floor12_annotated.png",
   "13": "floor13_annotated.png",
   "14": "floor14_annotated.png"
@@ -277,6 +277,16 @@ function renderMap(){
     </div>
     <div class="empty-hint">แตะที่ชั้นด้านบนเพื่อดูผังพื้นแบบเต็มจอ พร้อมซูม/เลื่อนดูได้ทุกส่วน (สำหรับดูอ้างอิงเท่านั้น)</div>
   `;
+  function showMapMissing(path){
+  const body = document.getElementById("mapOverlayBody");
+  if (!body) return;
+  body.innerHTML = "";
+  const div = document.createElement("div");
+  div.className = "map-missing";
+  div.style.color = "#fff";
+  div.innerHTML = "ยังไม่มีภาพผังของชั้นนี้<br>(วางไฟล์ " + path + " ไว้บนเซิร์ฟเวอร์)";
+  body.appendChild(div);
+}
   function openFloorMap(f){
     currentFloor = f;
     const imgPath = CONFIG.MAP_IMG_PATH + (FLOOR_IMG_OVERRIDE[f] || ("floor" + f + "_annotated.png"));
