@@ -77,6 +77,17 @@
   .photo-btn-row{display:flex;gap:8px;flex-wrap:wrap;}
   .photo-btn-alt{background:var(--teal);}
   .photo-hint{font-size:12px;color:var(--muted);margin-top:8px;}
+  .item-photo-zone{border:1.5px dashed var(--line);border-radius:10px;padding:10px;margin-top:10px;background:#fcfbf8;}
+  .item-photo-zone.required-empty{border-color:var(--red);background:var(--red-light);}
+  .item-photo-zone .iphint{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .item-photo-zone.required-empty .iphint{color:var(--red);font-weight:600;}
+  .item-thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .item-thumb{position:relative;width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+  .item-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .item-thumb .rm{position:absolute;top:1px;right:1px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1;}
+  .item-photo-btn-row{display:flex;gap:6px;}
+  .item-photo-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--navy);color:#fff;border:none;border-radius:8px;padding:8px 6px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;}
+  .item-photo-btn.alt{background:var(--teal);}
   .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
   .thumb{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line);}
   .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -221,7 +232,7 @@ const CHECKLIST = [
 // ---------- state ----------
 let currentMode = "inspect"; // inspect | map
 let currentRoom = null;
-let photos = [];
+let itemPhotos = {};
 let checks = {};
 let currentFloor = FLOORS[0];
 
@@ -519,10 +530,17 @@ function renderForm(){
         <textarea id="${item.key}_reason" placeholder="${item.placeholder}"></textarea>
         <div class="hint">หมายเหตุ (ถ้ามี)</div>
       </div>
+      <div class="item-photo-zone" id="${item.key}_photozone">
+        <div class="iphint" id="${item.key}_iphint">📷 แนบรูปประกอบข้อนี้ (อย่างน้อย 1 รูป)</div>
+        <div class="item-thumbs" id="${item.key}_thumbs"></div>
+        <div class="item-photo-btn-row">
+          <label class="item-photo-btn">📷 ถ่ายรูป<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onItemPhotosSelected('${item.key}', this)"></label>
+          <label class="item-photo-btn alt">🖼️ คลังภาพ<input type="file" accept="image/*" multiple style="display:none" onchange="onItemPhotosSelected('${item.key}', this)"></label>
+        </div>
+      </div>
     </div>
   `).join("");
   const noteNum = CHECKLIST.length + 1;
-  const photoNum = CHECKLIST.length + 2;
 
   app.innerHTML = `
     <div class="room-card">
@@ -539,17 +557,6 @@ function renderForm(){
       <div class="head"><span class="num">${noteNum}</span><h3>หมายเหตุอื่นๆ</h3></div>
       <textarea class="note" id="otherNote" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
     </div>
-    <div class="section">
-      <div class="head"><span class="num">${photoNum}</span><h3>รูปถ่ายหลักฐาน <span style="color:var(--red)">*จำเป็น</span></h3></div>
-      <div class="photo-zone" id="photoZone">
-        <div class="thumbs" id="thumbs"></div>
-        <div class="photo-btn-row">
-          <label class="photo-btn">📷 ถ่ายรูปใหม่<input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none"></label>
-          <label class="photo-btn photo-btn-alt">🖼️ เลือกจากคลังภาพ<input type="file" accept="image/*" id="galleryInput" style="display:none" multiple></label>
-        </div>
-        <div class="photo-hint">แนบได้สูงสุด 4 รูป · ระบบจะบีบอัดไฟล์อัตโนมัติ</div>
-      </div>
-    </div>
     <div class="footer-bar">
       <div class="inner">
         <button class="submit-btn" id="submitBtn">บันทึกผลตรวจ</button>
@@ -557,29 +564,35 @@ function renderForm(){
       </div>
     </div>
   `;
-  photos = []; checks = {};
-  CHECKLIST.forEach(item => { checks[item.key] = null; });
+  itemPhotos = {}; checks = {};
+  CHECKLIST.forEach(item => { checks[item.key] = null; itemPhotos[item.key] = []; });
   document.getElementById("changeRoomBtn").addEventListener("click", ()=>{ location.href = location.pathname; });
-  document.getElementById("cameraInput").addEventListener("change", onPhotosSelected);
-  document.getElementById("galleryInput").addEventListener("change", onPhotosSelected);
   document.getElementById("submitBtn").addEventListener("click", onSubmit);
-  renderThumbs();
+  CHECKLIST.forEach(item => renderItemThumbs(item.key));
 }
 
-async function onPhotosSelected(e){
-  const files = Array.from(e.target.files || []);
+const ITEM_PHOTO_MAX = 3;
+async function onItemPhotosSelected(key, inputEl){
+  const files = Array.from(inputEl.files || []);
   for (const f of files){
-    if (photos.length >= 4){ showToast("แนบได้สูงสุด 4 รูป", "err"); break; }
-    try{ const dataUrl = await fileToCompressedDataUrl(f); photos.push(dataUrl); }catch(err){ console.error(err); }
+    if (itemPhotos[key].length >= ITEM_PHOTO_MAX){ showToast("แนบได้สูงสุด " + ITEM_PHOTO_MAX + " รูปต่อข้อ", "err"); break; }
+    try{ const dataUrl = await fileToCompressedDataUrl(f); itemPhotos[key].push(dataUrl); }catch(err){ console.error(err); }
   }
-  e.target.value = "";
-  renderThumbs();
+  inputEl.value = "";
+  renderItemThumbs(key);
 }
-function removePhoto(i){ photos.splice(i,1); renderThumbs(); }
-function renderThumbs(){
-  const el = document.getElementById("thumbs");
+function removeItemPhoto(key, i){ itemPhotos[key].splice(i,1); renderItemThumbs(key); }
+function renderItemThumbs(key){
+  const el = document.getElementById(key+"_thumbs");
   if(!el) return;
-  el.innerHTML = photos.map((p,i)=>`<div class="thumb"><img src="${p}"><div class="rm" onclick="removePhoto(${i})">✕</div></div>`).join("");
+  el.innerHTML = itemPhotos[key].map((p,i)=>`<div class="item-thumb"><img src="${p}"><div class="rm" onclick="removeItemPhoto('${key}',${i})">✕</div></div>`).join("");
+  const zone = document.getElementById(key+"_photozone");
+  const hint = document.getElementById(key+"_iphint");
+  if (zone){
+    const empty = itemPhotos[key].length === 0;
+    zone.classList.toggle("required-empty", empty);
+    if (hint) hint.textContent = empty ? "📷 ต้องแนบรูปประกอบข้อนี้อย่างน้อย 1 รูป" : `📷 แนบแล้ว ${itemPhotos[key].length} รูป (สูงสุด ${ITEM_PHOTO_MAX})`;
+  }
 }
 
 function validate(){
@@ -590,11 +603,11 @@ function validate(){
       const reasonEl = document.getElementById(key+"_reason");
       if (!reasonEl.value.trim()){ showToast("กรุณาระบุเหตุผลในข้อที่ไม่ผ่าน", "err"); reasonEl.focus(); return false; }
     }
-  }
-  if (photos.length === 0){
-    showToast("กรุณาแนบรูปถ่ายหลักฐานอย่างน้อย 1 รูป", "err");
-    document.getElementById("photoZone").scrollIntoView({behavior:"smooth", block:"center"});
-    return false;
+    if (itemPhotos[key].length === 0){
+      showToast(`กรุณาแนบรูปประกอบข้อ "${item.title}" อย่างน้อย 1 รูป`, "err");
+      document.getElementById(key+"_photozone").scrollIntoView({behavior:"smooth", block:"center"});
+      return false;
+    }
   }
   return true;
 }
@@ -605,10 +618,17 @@ async function onSubmit(){
   if (!inspector){ showToast("กรุณาระบุชื่อผู้ตรวจ", "err"); return; }
   localStorage.setItem("valve_last_inspector", inspector);
 
-  const checklistResults = CHECKLIST.map(item => ({
-    key: item.key, title: item.title, status: checks[item.key],
-    reason: document.getElementById(item.key+"_reason") ? document.getElementById(item.key+"_reason").value.trim() : ""
-  }));
+  const allPhotos = [];
+  const checklistResults = CHECKLIST.map(item => {
+    const startIdx = allPhotos.length;
+    itemPhotos[item.key].forEach(p => allPhotos.push(p));
+    return {
+      key: item.key, title: item.title, status: checks[item.key],
+      reason: document.getElementById(item.key+"_reason") ? document.getElementById(item.key+"_reason").value.trim() : "",
+      photoCount: itemPhotos[item.key].length,
+      photoRange: [startIdx, allPhotos.length]
+    };
+  });
 
   const record = {
     localId: "v"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
@@ -620,7 +640,7 @@ async function onSubmit(){
     inspector: inspector,
     checklist: checklistResults,
     note: document.getElementById("otherNote").value.trim(),
-    photos: photos,
+    photos: allPhotos,
     submittedAt: new Date().toISOString(),
     synced: false
   };
