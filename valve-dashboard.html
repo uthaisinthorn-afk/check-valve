@@ -110,6 +110,7 @@
   </div>
 
   <div class="controls">
+    <button class="todaybtn" id="allBtn" onclick="setAllTime()">📊 ทั้งหมด (สะสม)</button>
     <button class="todaybtn" id="todayBtn" onclick="setToday()">📅 วันนี้</button>
     <input type="date" id="dateInput">
     <select id="floorFilter"><option value="">ทุกชั้น</option></select>
@@ -128,10 +129,10 @@
     </div>
   </div>
 
-  <div class="section-title">📋 จุดที่ตรวจแล้ว <span class="count" id="cInspected">0</span></div>
+  <div class="section-title">📋 จุดที่ตรวจแล้ว <span id="scopeLabel1"></span><span class="count" id="cInspected">0</span></div>
   <div class="list" id="listInspected"></div>
 
-  <div class="section-title">⏳ จุดที่ยังไม่ได้ตรวจ (วันที่เลือก) <span class="count" id="cPending">0</span></div>
+  <div class="section-title">⏳ จุดที่ยังไม่ได้ตรวจ <span id="scopeLabel2"></span><span class="count" id="cPending">0</span></div>
   <div class="list" id="listPending"></div>
 </div>
 
@@ -265,10 +266,15 @@ function populateFilters(){
 }
 
 function setToday(){ document.getElementById("dateInput").value = todayStr(); loadData(); }
+function setAllTime(){ document.getElementById("dateInput").value = ""; loadData(); }
 
 async function loadData(){
   const date = document.getElementById("dateInput").value;
   document.getElementById("todayBtn").classList.toggle("active", date === todayStr());
+  document.getElementById("allBtn").classList.toggle("active", date === "");
+  const scopeText = date ? `(ณ วันที่ ${date}) ` : "(สะสมทั้งหมด) ";
+  document.getElementById("scopeLabel1").textContent = scopeText;
+  document.getElementById("scopeLabel2").textContent = scopeText;
 
   if (!CONFIG.GAS_URL){
     document.getElementById("stats").innerHTML = `
@@ -409,7 +415,7 @@ function openLightbox(src){ document.getElementById("lightboxImg").src = src; do
 
 function init(){
   populateFilters();
-  document.getElementById("dateInput").value = todayStr();
+  document.getElementById("dateInput").value = "";
   ["floorFilter","searchBox"].forEach(id=>{
     document.getElementById(id).addEventListener("input", render);
     document.getElementById(id).addEventListener("change", render);
