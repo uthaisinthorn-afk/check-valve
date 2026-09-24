@@ -83,6 +83,10 @@ async function generate(){
     alert("กรุณาใส่ URL ของหน้า valve-checklist.html ก่อน ไม่งั้น QR ที่พิมพ์ออกมาจะสแกนแล้วเปิดไม่ถูกที่");
     return;
   }
+  if (typeof QRCode === "undefined"){
+    alert("โหลดไลบรารีสร้าง QR Code ไม่สำเร็จ (อาจเพราะเครือข่ายบล็อกการโหลดจาก cdn.jsdelivr.net) กรุณาเช็คอินเทอร์เน็ต หรือลองเปิดจากเครือข่ายอื่น (เช่น ฮอตสปอตมือถือ) แล้วลองใหม่");
+    return;
+  }
   localStorage.setItem("valve_qr_base_url", baseUrl);
   const floor = document.getElementById("floorFilter").value;
   let list = ROOMS;
@@ -111,7 +115,16 @@ async function generate(){
       cell.appendChild(nameDiv);
       pageEl.appendChild(cell);
       const url = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "room=" + room.id;
-      await QRCode.toCanvas(canvas, url, { width: 200, margin: 1 });
+      try{
+        await QRCode.toCanvas(canvas, url, { width: 200, margin: 1 });
+      }catch(err){
+        console.error("สร้าง QR ไม่สำเร็จสำหรับห้อง", room.code, err);
+        cell.style.borderColor = "#dc2626";
+        const errDiv = document.createElement("div");
+        errDiv.style.cssText = "font-size:8px;color:#dc2626;";
+        errDiv.textContent = "สร้าง QR พลาด";
+        cell.appendChild(errDiv);
+      }
     }
   }
 }
