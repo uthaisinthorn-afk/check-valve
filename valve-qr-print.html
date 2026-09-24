@@ -127,6 +127,10 @@ async function generate(){
       const url = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "room=" + room.id;
       try{
         await QRCode.toCanvas(canvas, url, { width: 200, margin: 1 });
+        // qrcode library sets an inline style size on the canvas after rendering,
+        // which overrides the .cell canvas CSS rule — force the intended print size back.
+        canvas.style.width = "28mm";
+        canvas.style.height = "28mm";
       }catch(err){
         console.error("สร้าง QR ไม่สำเร็จสำหรับห้อง", room.code, err);
         cell.style.borderColor = "#dc2626";
